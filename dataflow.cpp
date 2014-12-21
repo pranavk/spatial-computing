@@ -20,7 +20,7 @@ struct DataFlow : public FunctionPass {
       worklist.push_back(&*I);
       outs() << *I << "\n";
     }
-    outs() << "\n\n;
+    outs() << "\n\n";
 
     for (std::vector<Instruction*>::iterator iter = worklist.begin(); iter != worklist.end(); iter++){
       Instruction *instr = *iter;
