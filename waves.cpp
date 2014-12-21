@@ -1,3 +1,12 @@
+/*
+ * Spatial Computation - Manifestation of Spatial computing.
+ * Copyright © 2014 Pranav Kant
+ *
+ * This code is available to you under Apache License Version 2.0, January
+ * 2014. You can grab a copy of license from the same repository from where you
+ * fetched this code.
+ */
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/PostOrderIterator.h"
