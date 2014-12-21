@@ -1,0 +1,6 @@
+clang -c -emit-llvm fib.c
+if [ "$1" == "opt" ]; then
+	opt -O1 -o fib.bc fib.bc
+fi
+opt --dot-cfg-only fib.bc
+dot -Tpng cfg.fib.dot > fib.png
