@@ -23,6 +23,8 @@
 #include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/InstIterator.h"
+#include "llvm/Support/GraphWriter.h"
 
 #include <string>
 #include <cstdio>
@@ -32,11 +34,11 @@
 #include <map>
 #include <deque>
 
+#include "waves.h"
+
 using namespace llvm;
 
-class WaveScalar{
-public:
-  void runBFS(){
+void WaveScalar::runBFS(){
     while(!Q.empty()){
       BasicBlock *bb = const_cast<BasicBlock*>(Q.front());
       Q.pop_front();
@@ -60,7 +62,8 @@ public:
     }
   }
 
-  void annotateWaves(const Function &F, SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
+void WaveScalar::annotateWaves(const Function &F,
+                     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
     waveNo = 0;
     init(F);
     setBackEdges(F, res);
@@ -72,23 +75,21 @@ public:
     runBFS();
   }
 
-  int isSameWave(const Instruction* i1, const Instruction *i2){
-    return IMap[i1] == IMap[i2];
+int WaveScalar::isSameWave(Instruction* i1,
+                           Instruction *i2){
+    std::string ppstr;
+    raw_string_ostream rso1(ppstr);
+    i1->print(rso1);
+    
+    std::string str;
+    raw_string_ostream rso(str);
+    i2->print(rso);
+            
+    return IMap[str] == IMap[ppstr];
   }
   
-private:
-  enum Color {WHITE, GREY, BLACK};
-  typedef DenseMap<const BasicBlock *, Color> BBColorMap;
-  typedef SmallVector<const BasicBlock *, 32> BBVector;
-  typedef DenseMap<const BasicBlock *, unsigned> BBIDMap;
-  typedef DenseMap<const Instruction*, unsigned> InstrMap;
-  InstrMap IMap;
-  BBColorMap ColorMap;
-  BBIDMap IDMap, BEMap;
-  std::deque<const BasicBlock*> Q;
-  unsigned waveNo;
 
-  void init (const Function &F){
+void WaveScalar::init (const Function &F){
     //Intialize the color map.
     unsigned K = 0;
     for (Function::const_iterator I = F.begin(), IE = F.end(); I != IE; I++, K++){
@@ -101,14 +102,18 @@ private:
     }
   }
 
-  void setIMap(BasicBlock* bb, unsigned waveNo){
+void WaveScalar::setIMap(BasicBlock* bb, unsigned waveNo){
     for (BasicBlock::iterator I = bb->begin(), IE = bb->end(); I!=IE; I++){
       Instruction *instr = &*I;
-      IMap[instr] = waveNo;
+      std::string ppstr;
+      raw_string_ostream rso1(ppstr);
+      instr->print(rso1);
+      
+      IMap[ppstr] = waveNo;
     }
   }
   
-  void setBackEdges (const Function &F, SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
+void WaveScalar::setBackEdges (const Function &F, SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
     FindFunctionBackedges(F, *res);
     while (!res->empty()){
       std::pair<const BasicBlock*, const BasicBlock*> tempPair = res->pop_back_val();
@@ -117,36 +122,51 @@ private:
     }
   }
   
-  void setLabel(BasicBlock **succ, unsigned k){
+void WaveScalar::setLabel(BasicBlock **succ, unsigned k){
     std::stringstream ss;
     ss << k;
     std::string str = ss.str();
     (*succ)->setName(str);
   }
-};
 
 /*
-  Wave class for waves pass. The main task of this pass is to annotate waves in
-  a control flow graph.
+  Helper Functions
 */
-struct Waves : public FunctionPass, public SmallVectorImpl <std::pair<const BasicBlock*, const BasicBlock*> > {
-  static char ID;
-  Waves() : FunctionPass(ID), SmallVectorImpl(10){}
+std::string EscapeString(const std::string &Label) {
+  std::string Str(Label);
+  for (unsigned i = 0; i != Str.length(); ++i)
+    switch (Str[i]) {
+    case '\n':
+      Str.insert(Str.begin()+i, '\\');  // Escape character...
+      ++i;
+      Str[i] = 'n';
+      break;
+    case '\t':
+      Str.insert(Str.begin()+i, ' ');  // Convert to two spaces
+      ++i;
+      Str[i] = ' ';
+      break;
+    case '\\':
+      if (i+1 != Str.length())
+        switch (Str[i+1]) {
+          case 'l': continue; // don't disturb \l
+          case '|': case '{': case '}':
+            Str.erase(Str.begin()+i); continue;
+          default: break;
+        }
+    case '{': case '}':
+    case '<': case '>':
+    case '|': case '"':
+    case '[': case ']':
+    case '%':
+      Str.insert(Str.begin()+i, '\\');  // Escape character...
+      ++i;  // don't infinite loop
+      break;
+    }
+  return Str;
+}
 
-  bool runOnFunction(Function &F) {
-    if (F.getName() == "main")
-      return false;
-    outs() << "Basic blocks of function " << F.getName() << "\n";
+std::string insertWA(){
+  return " -> WA -> ";
+}
 
-    SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res = this;
-    WaveScalar obj;
-    obj.annotateWaves(F, res);
-    F.viewCFGOnly();
-
-    
-    return false;
-  }
-};
-
-char Waves::ID = 0;
-static RegisterPass<Waves> X("annotate", "Annotate Waves", false, false);
