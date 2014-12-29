@@ -141,57 +141,6 @@ struct DataFlowGraph : public FunctionPass,
     raw_fd_ostream File("dfg.dot", ErrorInfo);
     WriteGraph (File, (DFG<Function*>)&F);
 
-    /*
-    for (std::vector<Instruction*>::iterator iter = worklist.begin(); iter != worklist.end(); iter++){
-      Instruction *instr = *iter;
-        std::string ppstr;
-        raw_string_ostream rso1(ppstr);
-        instr->print(rso1);
-        std::string pstr = EscapeString(ppstr);
-
-
-        for (Value::use_iterator i = instr->use_begin(), ie = instr->use_end(); i != ie; i++){
-          Value *v = *i;
-          Instruction *vi = dyn_cast<Instruction>(v);
-          std::string str;
-          raw_string_ostream rso(str);
-          vi->print(rso);
-          std::string istr = EscapeString(str);
-
-          if (!obj.isSameWave(instr, vi))
-            outs() << "\"" <<pstr << "\"" << WA() << "\"" <<istr << "\";\n";
-          else
-            outs() << "\"" << pstr << "\" -> \"" << istr << "\";\n";
-        }
-    }
-
-    for (std::vector<Instruction*>::iterator iter = worklist.begin(); iter!=worklist.end(); iter++){
-      Instruction *instr = *iter;
-        std::string ppstr;
-        raw_string_ostream rso1(ppstr);
-        instr->print(rso1);
-        std::string pstr = EscapeString(ppstr);
-
-      for (User::op_iterator it = instr->op_begin(), e = instr->op_end(); it!=e; it++){
-        Value *v = *it;
-        Instruction *vi = dyn_cast<Instruction>(*it);
-
-        std::string str;
-        raw_string_ostream rso(str);
-        vi->print(rso);
-        std::string istr = EscapeString(str);
-        if (istr.compare("")==0 or pstr.compare("")==0)
-          continue;
-
-
-        if (!obj.isSameWave(instr, vi))
-          outs() << "\"" << pstr << "\"" << WA() << "\"" << istr << "\";\n";
-        else
-          outs() << "\"" << istr << "\" -> \"" << pstr << "\";\n";
-      }
-    }
-    outs() << "}";
-    */
     return false;
   }
 };
