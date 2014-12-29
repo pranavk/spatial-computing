@@ -36,23 +36,6 @@ using namespace llvm;
 
 class WaveScalar{
 public:
-  void runDFS(const Function &F){
-    outs() << "Running DFS on function : " << F.getName() << "\n";
-
-    //Intialize the color map.
-    unsigned K = 0;
-    for (Function::const_iterator I = F.begin(), IE = F.end(); I != IE; I++, K++){
-      ColorMap[I] = WaveScalar::WHITE;
-      IDMap[I] = K;
-      const BasicBlock *pbb = &*I; 
-      BasicBlock *pp = const_cast<BasicBlock*>(pbb);
-      setLabel(&pp, K);
-      BEMap[I] = 1;
-    }
-    
-    recursiveDFS (&F.getEntryBlock());
-  }
-
   void runBFS(){
     while(!Q.empty()){
       BasicBlock *bb = const_cast<BasicBlock*>(Q.front());
@@ -125,37 +108,6 @@ private:
     std::string str = ss.str();
     (*succ)->setName(str);
   }
-
-  /*
-   This function is used to detect backedges in CFG. 
-   */
-  bool recursiveDFS(const BasicBlock *BB){
-    ColorMap[BB] = WaveScalar::GREY;
-    const TerminatorInst *TInst = BB->getTerminator();
-
-    for (unsigned i = 0, nsucc = TInst->getNumSuccessors(); i < nsucc; i++){
-      BasicBlock *succ = TInst->getSuccessor(i);
-      Color succColor = ColorMap[succ];
-      if (succColor == WaveScalar::WHITE){
-        if (!recursiveDFS(succ))
-          return false;
-      }else if (succColor == WaveScalar::GREY) {
-        outs() << "Detected cycle: from vertex ";
-        outs() << IDMap[BB];
-        outs() << " to " << IDMap[succ] << "\n";
-        /*
-          BEMap is initially set to 1 and it changes to 0 for all those nodes
-          where backedge is detected.
-        */
-        BEMap[succ] = 0;
-        BEMap[BB] = 0;
-        return false;
-      }
-    }
-    ColorMap[BB] = WaveScalar::BLACK;
-    return true;
-  } // start function
-  
 };
 
 /*
