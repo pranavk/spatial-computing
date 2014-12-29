@@ -32,9 +32,6 @@
 #include <map>
 #include <deque>
 
-#include "boost/graph/graphviz.hpp"
-#include "boost/graph/adjacency_list.hpp"
-
 using namespace llvm;
 
 class WaveScalar{
@@ -146,7 +143,6 @@ struct Waves : public FunctionPass, public SmallVectorImpl <std::pair<const Basi
     obj.annotateWaves(F, res);
     F.viewCFGOnly();
 
-    Graph g;
     
     return false;
   }
