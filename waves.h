@@ -33,6 +33,8 @@ class WaveScalar{
   void runBFS();
   void annotateWaves(const Function &F, SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res);
   int isSameWave (Instruction* i, Instruction* e);
+  int getWaveNo(std::string instruction);
+
  private:
   enum Color {WHITE, GREY, BLACK};
   typedef DenseMap<const BasicBlock *, Color> BBColorMap;

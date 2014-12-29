@@ -23,10 +23,38 @@
 #include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/InstIterator.h"
 
 #include "waves.h"
 
 using namespace llvm;
+
+void printInstructionsWithWaveNo(Function &F, WaveScalar &obj){
+  for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
+    Instruction *instr = &*I;
+    std::string str;
+    raw_string_ostream rso(str);
+    instr->print(rso);
+
+    outs() << *instr << " -> " << obj.getWaveNo(str) << "\n";
+  }
+}
+
+void printDefs(Instruction *instr){
+  outs() << "Use :" << *instr << "\n";
+  for (User::op_iterator it = instr->op_begin(), e = instr->op_end(); it!=e; it++){
+    Instruction *vi = dyn_cast<Instruction>(*it);
+    outs() << "\t\t" << *vi << "\n";
+  }
+}
+
+void printUses(Instruction *instr){
+  outs() << "Def :" << *instr << "\n";
+  for (Value::use_iterator i = instr->use_begin(), ie = instr->use_end(); i != ie; i++){
+    Instruction *vi = dyn_cast<Instruction>(*i);
+    outs() << "\t\t" <<*vi << "\n";
+  }
+}
 
 /*
   DataFlowGraph is a pass that would output the Data flow graph for
@@ -49,20 +77,22 @@ struct DataFlowGraph : public FunctionPass,
     outs() << "Outputting CFG ...\n";
     F.viewCFG();
 
-    /*
+    printInstructionsWithWaveNo(F, obj);
+
     outs() << "strict diGraph G{\n";
     std::vector<Instruction*> worklist;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
       Instruction *instr = &*I;
       worklist.push_back(instr);
-      std::string str;
-      raw_string_ostream rso(str);
-      instr->print(rso);
-
-      std::string istr = EscapeString(str);
-      //      outs() << "\"" << istr << "\";\n";
     }
-    
+
+    for (std::vector<Instruction*>::iterator iter = worklist.begin();
+         iter != worklist.end();
+         iter++){
+      Instruction *instr = *iter;
+      printUses(instr);
+    }
+    /*
     for (std::vector<Instruction*>::iterator iter = worklist.begin(); iter != worklist.end(); iter++){
       Instruction *instr = *iter;
         std::string ppstr;
@@ -70,7 +100,7 @@ struct DataFlowGraph : public FunctionPass,
         instr->print(rso1);
         std::string pstr = EscapeString(ppstr);
 
-      
+
         for (Value::use_iterator i = instr->use_begin(), ie = instr->use_end(); i != ie; i++){
           Value *v = *i;
           Instruction *vi = dyn_cast<Instruction>(v);
@@ -78,7 +108,7 @@ struct DataFlowGraph : public FunctionPass,
           raw_string_ostream rso(str);
           vi->print(rso);
           std::string istr = EscapeString(str);
-          
+
           if (!obj.isSameWave(instr, vi))
             outs() << "\"" <<pstr << "\"" << WA() << "\"" <<istr << "\";\n";
           else
@@ -92,11 +122,11 @@ struct DataFlowGraph : public FunctionPass,
         raw_string_ostream rso1(ppstr);
         instr->print(rso1);
         std::string pstr = EscapeString(ppstr);
-      
+
       for (User::op_iterator it = instr->op_begin(), e = instr->op_end(); it!=e; it++){
         Value *v = *it;
         Instruction *vi = dyn_cast<Instruction>(*it);
-        
+
         std::string str;
         raw_string_ostream rso(str);
         vi->print(rso);

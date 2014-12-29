@@ -63,16 +63,17 @@ void WaveScalar::runBFS(){
   }
 
 void WaveScalar::annotateWaves(const Function &F,
-                     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
+                               SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
     waveNo = 0;
     init(F);
     setBackEdges(F, res);
     for (Function::const_iterator I = F.begin(), IE = F.end(); I != IE; I++){
       ColorMap[I] = WaveScalar::WHITE;
     }
-    
+
     Q.push_back(&F.getEntryBlock());
     runBFS();
+
   }
 
 int WaveScalar::isSameWave(Instruction* i1,
@@ -80,14 +81,18 @@ int WaveScalar::isSameWave(Instruction* i1,
     std::string ppstr;
     raw_string_ostream rso1(ppstr);
     i1->print(rso1);
-    
+
     std::string str;
     raw_string_ostream rso(str);
     i2->print(rso);
-            
+
     return IMap[str] == IMap[ppstr];
-  }
-  
+}
+
+int WaveScalar::getWaveNo(std::string instruction){
+  return IMap[instruction];
+}
+
 
 void WaveScalar::init (const Function &F){
     //Intialize the color map.
@@ -95,7 +100,7 @@ void WaveScalar::init (const Function &F){
     for (Function::const_iterator I = F.begin(), IE = F.end(); I != IE; I++, K++){
       ColorMap[I] = WaveScalar::WHITE;
       IDMap[I] = K;
-      const BasicBlock *pbb = &*I; 
+      const BasicBlock *pbb = &*I;
       BasicBlock *pp = const_cast<BasicBlock*>(pbb);
       setLabel(&pp, K);
       BEMap[I] = 1;
@@ -108,11 +113,11 @@ void WaveScalar::setIMap(BasicBlock* bb, unsigned waveNo){
       std::string ppstr;
       raw_string_ostream rso1(ppstr);
       instr->print(rso1);
-      
+
       IMap[ppstr] = waveNo;
     }
   }
-  
+
 void WaveScalar::setBackEdges (const Function &F, SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
     FindFunctionBackedges(F, *res);
     while (!res->empty()){
@@ -121,7 +126,7 @@ void WaveScalar::setBackEdges (const Function &F, SmallVectorImpl<std::pair<cons
       BEMap[tempPair.second] = 0;
     }
   }
-  
+
 void WaveScalar::setLabel(BasicBlock **succ, unsigned k){
     Twine::Twine twine(k);
     (*succ)->setName(twine);
@@ -167,4 +172,3 @@ std::string EscapeString(const std::string &Label) {
 std::string insertWA(){
   return " -> WA -> ";
 }
-
