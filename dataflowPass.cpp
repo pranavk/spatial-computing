@@ -24,6 +24,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/InstIterator.h"
+#include "llvm/Support/DataFlow.h"
+#include "llvm/Support/GraphWriter.h"
 
 #include "waves.h"
 
@@ -55,6 +57,47 @@ void printUses(Instruction *instr){
     outs() << "\t\t" <<*vi << "\n";
   }
 }
+
+template<typename T>
+class DFG{
+  T p;
+public:
+  DFG(T t) : p(t) { }
+  T operator*() {return p;}
+};
+
+template<>
+struct DOTGraphTraits<DFG<Function*> > : public DefaultDOTGraphTraits{
+  explicit DOTGraphTraits(bool isSimple=false) : DefaultDOTGraphTraits(isSimple){}
+
+  static std::string getGraphName(DFG<Function*> F){
+    return "DFG for function";
+  }
+
+  static std::string getNodeLabel(Value *v, const DFG<Function*> &F){
+    Instruction *instr = dyn_cast<Instruction>(v);
+    std::string str;
+    raw_string_ostream rso(str);
+    instr->print(rso);
+
+    return str;
+  }
+};
+
+template<>
+struct GraphTraits<DFG<Function*> > : public GraphTraits<Value*> {
+  typedef inst_iterator nodes_iterator;
+
+  static nodes_iterator nodes_begin(DFG<Function*> F){
+    return inst_begin(*F);
+  }
+
+  static nodes_iterator nodes_end(DFG<Function*> F){
+    return inst_end(*F);
+  }
+};
+
+
 
 /*
   DataFlowGraph is a pass that would output the Data flow graph for
@@ -92,6 +135,12 @@ struct DataFlowGraph : public FunctionPass,
       Instruction *instr = *iter;
       printUses(instr);
     }
+
+    //    GraphWriter<DFG<Function*> > g(F);
+    std::string ErrorInfo;
+    raw_fd_ostream File("dfg.dot", ErrorInfo);
+    WriteGraph (File, (DFG<Function*>)&F);
+
     /*
     for (std::vector<Instruction*>::iterator iter = worklist.begin(); iter != worklist.end(); iter++){
       Instruction *instr = *iter;
