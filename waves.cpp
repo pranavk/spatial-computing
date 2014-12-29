@@ -32,6 +32,9 @@
 #include <map>
 #include <deque>
 
+#include "boost/graph/graphviz.hpp"
+#include "boost/graph/adjacency_list.hpp"
+
 using namespace llvm;
 
 class WaveScalar{
@@ -42,6 +45,7 @@ public:
       Q.pop_front();
 
       outs() << "Block " << IDMap[bb] << " is in Wave " << waveNo << "\n";
+      setIMap(bb, waveNo);
       const TerminatorInst *TInst = bb->getTerminator();
       for (unsigned i = 0, nsucc = TInst->getNumSuccessors(); i < nsucc; i++){
         BasicBlock *succ = TInst->getSuccessor(i);
@@ -70,11 +74,18 @@ public:
     Q.push_back(&F.getEntryBlock());
     runBFS();
   }
+
+  int isSameWave(const Instruction* i1, const Instruction *i2){
+    return IMap[i1] == IMap[i2];
+  }
+  
 private:
   enum Color {WHITE, GREY, BLACK};
   typedef DenseMap<const BasicBlock *, Color> BBColorMap;
   typedef SmallVector<const BasicBlock *, 32> BBVector;
   typedef DenseMap<const BasicBlock *, unsigned> BBIDMap;
+  typedef DenseMap<const Instruction*, unsigned> InstrMap;
+  InstrMap IMap;
   BBColorMap ColorMap;
   BBIDMap IDMap, BEMap;
   std::deque<const BasicBlock*> Q;
@@ -90,6 +101,13 @@ private:
       BasicBlock *pp = const_cast<BasicBlock*>(pbb);
       setLabel(&pp, K);
       BEMap[I] = 1;
+    }
+  }
+
+  void setIMap(BasicBlock* bb, unsigned waveNo){
+    for (BasicBlock::iterator I = bb->begin(), IE = bb->end(); I!=IE; I++){
+      Instruction *instr = &*I;
+      IMap[instr] = waveNo;
     }
   }
   
@@ -127,6 +145,8 @@ struct Waves : public FunctionPass, public SmallVectorImpl <std::pair<const Basi
     WaveScalar obj;
     obj.annotateWaves(F, res);
     F.viewCFGOnly();
+
+    Graph g;
     
     return false;
   }
