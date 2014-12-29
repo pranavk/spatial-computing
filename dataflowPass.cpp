@@ -97,8 +97,6 @@ struct GraphTraits<DFG<Function*> > : public GraphTraits<Value*> {
   }
 };
 
-
-
 /*
   DataFlowGraph is a pass that would output the Data flow graph for
   corresponding function in DOT format.
@@ -122,7 +120,6 @@ struct DataFlowGraph : public FunctionPass,
 
     printInstructionsWithWaveNo(F, obj);
 
-    outs() << "strict diGraph G{\n";
     std::vector<Instruction*> worklist;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
       Instruction *instr = &*I;
@@ -136,7 +133,6 @@ struct DataFlowGraph : public FunctionPass,
       printUses(instr);
     }
 
-    //    GraphWriter<DFG<Function*> > g(F);
     std::string ErrorInfo;
     raw_fd_ostream File("dfg.dot", ErrorInfo);
     WriteGraph (File, (DFG<Function*>)&F);
