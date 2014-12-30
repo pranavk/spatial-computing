@@ -3,4 +3,5 @@
 *.bc
 *.ll
 *~
+todo
 Release+Asserts
