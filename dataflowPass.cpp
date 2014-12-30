@@ -25,8 +25,9 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/DataFlow.h"
-#include "llvm/Support/GraphWriter.h"
+//#include "llvm/Support/GraphWriter.h"
 
+#include "DFGWriter.h"
 #include "waves.hpp"
 #include "dataflow.hpp"
 
@@ -81,7 +82,7 @@ struct DataFlowGraph : public FunctionPass,
     outs() << "Outputting CFG ...\n";
     F.viewCFG();
 
-    printInstructionsWithWaveNo(F, obj);
+    //    printInstructionsWithWaveNo(F, obj);
 
     std::vector<Instruction*> worklist;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
@@ -93,12 +94,12 @@ struct DataFlowGraph : public FunctionPass,
          iter != worklist.end();
          iter++){
       Instruction *instr = *iter;
-      printUses(instr);
+      //      printUses(instr);
     }
 
     std::string ErrorInfo;
     raw_fd_ostream File("dfg.dot", ErrorInfo);
-    WriteGraph (File, (DFG<Function*>)&F);
+    WriteDFG (File, (DFG<Function*>)&F);
 
     return false;
   }

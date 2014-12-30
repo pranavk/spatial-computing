@@ -80,5 +80,18 @@ struct GraphTraits<DFG<Function*> > {
     return inst_end(*F);
   }
 };
+/*
+class DFGWriter : public GraphWriter<DFG<Function*> > {
+  raw_ostream &O;
+public:
+  DFGWriter(raw_ostream &o, const DFG<Function*> &F, bool SN);
+  void writeHeader(const std::string &Title);
+  void writeGraph(const std::string &Title="");
+};
 
+raw_ostream &WriteDFG(raw_ostream &O,
+                      const DFG<Function*> &G,
+                      bool shortNames = false,
+                      const Twine &Title = "");
+*/
 #endif
