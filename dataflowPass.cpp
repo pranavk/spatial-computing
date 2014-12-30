@@ -63,6 +63,9 @@ class DFG{
   T p;
 public:
   DFG(T t) : p(t) { }
+  std::string getFunctionName(){
+    return p->getName();
+  }
   T operator*() {return p;}
 };
 
@@ -71,7 +74,7 @@ struct DOTGraphTraits<DFG<Function*> > : public DefaultDOTGraphTraits{
   explicit DOTGraphTraits(bool isSimple=false) : DefaultDOTGraphTraits(isSimple){}
 
   static std::string getGraphName(DFG<Function*> F){
-    return "DFG for function";
+    return "DFG for function \'" + F.getFunctionName() + "\'";
   }
 
   static std::string getNodeLabel(Value *v, const DFG<Function*> &F){
@@ -85,7 +88,24 @@ struct DOTGraphTraits<DFG<Function*> > : public DefaultDOTGraphTraits{
 };
 
 template<>
-struct GraphTraits<DFG<Function*> > : public GraphTraits<Value*> {
+struct GraphTraits<DFG<Function*> > {
+  typedef Value NodeType;
+  typedef Value::use_iterator ChildIteratorType;
+
+  static NodeType *getEntryNode(Value *G){
+    return G;
+  }
+
+  static inline ChildIteratorType child_begin(NodeType *N){
+    Instruction *instr = dyn_cast<Instruction>(N);
+
+    return N->use_begin();
+  }
+
+  static inline ChildIteratorType child_end(NodeType *N){
+    return N->use_end();
+  }
+
   typedef inst_iterator nodes_iterator;
 
   static nodes_iterator nodes_begin(DFG<Function*> F){
@@ -142,6 +162,6 @@ struct DataFlowGraph : public FunctionPass,
 };
 
 char DataFlowGraph::ID = 0;
-static RegisterPass<DataFlowGraph> X("dot-dataflow",
+static RegisterPass<DataFlowGraph> X("dot-dfg",
                                      "Output Dataflow Graph in DOT format for WaveScalar Architecture",
                                      false, false);
