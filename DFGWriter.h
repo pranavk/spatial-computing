@@ -19,6 +19,7 @@
 #include <cassert>
 #include <vector>
 #include "dataflow.hpp"
+#include "waves.hpp"
 
 namespace llvm {
 
@@ -59,9 +60,12 @@ class DFGWriter {
 
     return hasEdgeSourceLabels;
   }
-
+  WaveScalar &wavescalar;
 public:
-  DFGWriter(raw_ostream &o, const DFG<Function*> &g, bool SN) : O(o), G(g) {
+  DFGWriter(raw_ostream &o,
+            const DFG<Function*> &g,
+            bool SN,
+            WaveScalar &obj) : O(o), G(g), wavescalar(obj) {
     DTraits = DOTTraits(SN);
   }
 
@@ -274,49 +278,18 @@ public:
   }
 };
 
-raw_ostream &WriteDFG(raw_ostream &O, const DFG<Function*> &G,
-                        bool ShortNames = false,
-                        const Twine &Title = "") {
+raw_ostream &WriteDFG(raw_ostream &O,
+                      const DFG<Function*> &G,
+                      WaveScalar &wavescalar,
+                      bool ShortNames = false,
+                      const Twine &Title = "") {
   // Start the graph emission process...
-  DFGWriter W(O, G, ShortNames);
+  DFGWriter W(O, G, ShortNames, wavescalar);
 
   // Emit the graph.
   W.writeGraph(Title.str());
 
   return O;
-}
-
-std::string createGraphFilename(const Twine &Name, int &FD);
-
-std::string WriteGraph(const DFG<Function*> &G, const Twine &Name,
-                       bool ShortNames = false, const Twine &Title = "") {
-  int FD;
-  std::string Filename = createGraphFilename(Name, FD);
-  raw_fd_ostream O(FD, /*shouldClose=*/ true);
-
-  if (FD == -1) {
-    errs() << "error opening file '" << Filename << "' for writing!\n";
-    return "";
-  }
-
-  llvm::WriteGraph(O, G, ShortNames, Title);
-  errs() << " done. \n";
-
-  return Filename;
-}
-
-/// ViewGraph - Emit a dot graph, run 'dot', run gv on the postscript file,
-/// then cleanup.  For use from the debugger.
-///
-void ViewGraph(const DFG<Function*> &G, const Twine &Name,
-               bool ShortNames = false, const Twine &Title = "",
-               GraphProgram::Name Program = GraphProgram::DOT) {
-  std::string Filename = llvm::WriteGraph(G, Name, ShortNames, Title);
-
-  if (Filename.empty())
-    return;
-
-  DisplayGraph(Filename, true, Program);
 }
 
 } // End llvm namespace

@@ -99,7 +99,7 @@ struct DataFlowGraph : public FunctionPass,
 
     std::string ErrorInfo;
     raw_fd_ostream File("dfg.dot", ErrorInfo);
-    WriteDFG (File, (DFG<Function*>)&F);
+    WriteDFG (File, (DFG<Function*>)&F, obj);
 
     return false;
   }
