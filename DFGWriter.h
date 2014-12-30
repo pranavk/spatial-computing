@@ -252,6 +252,14 @@ public:
     O << "\"];\n";
   }
 
+  std::string nodeToString(NodeType *node){
+    std::string res;
+    raw_string_ostream rso(res);
+    Instruction *i1 = dyn_cast<Instruction>(node);
+    i1->print(rso);
+    return res;
+  }
+  
   /// emitEdge - Output an edge from a simple node into the graph...
   void emitEdge(const void *SrcNodeID, int SrcNodePort,
                 const void *DestNodeID, int DestNodePort,
@@ -259,10 +267,27 @@ public:
     if (SrcNodePort  > 64) return;             // Eminating from truncated part?
     if (DestNodePort > 64) DestNodePort = 64;  // Targeting the truncated part?
 
+    void *n1 = const_cast<void*>(SrcNodeID);
+    void *n2 = const_cast<void*>(DestNodeID);
+
+    NodeType *node1 = static_cast<NodeType*>(n1);
+    NodeType *node2 = static_cast<NodeType*>(n2);
+
+    std::string instr1 = nodeToString(node1);
+    std::string instr2 = nodeToString(node2);
+
     O << "\tNode" << SrcNodeID;
     if (SrcNodePort >= 0)
       O << ":s" << SrcNodePort;
+
+    // TODO: Find a better way to find uniqueness for WA nodes rather than using
+    // rand() function.
+    if (!wavescalar.isSameWave(instr1, instr2)){
+      O << " -> WA" << rand();
+    }
+
     O << " -> Node" << DestNodeID;
+    
     if (DestNodePort >= 0 && DTraits.hasEdgeDestLabels())
       O << ":d" << DestNodePort;
 
