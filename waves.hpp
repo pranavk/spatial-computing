@@ -7,6 +7,9 @@
  * fetched this code.
  */
 
+#ifndef SPATIAL_WAVES_HPP
+#define SPATIAL_WAVES_HPP
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -60,3 +63,5 @@ class WaveScalar{
 std::string escapeString (const std::string &Label);
 
 std::string insertWA ();
+
+#endif
