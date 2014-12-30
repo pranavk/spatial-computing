@@ -89,6 +89,11 @@ int WaveScalar::isSameWave(Instruction* i1,
     return IMap[str] == IMap[ppstr];
 }
 
+int WaveScalar::isSameWave(std::string i1,
+                           std::string i2){
+  return IMap[i1] == IMap[i2];
+}
+
 int WaveScalar::getWaveNo(std::string instruction){
   return IMap[instruction];
 }

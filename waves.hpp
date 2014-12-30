@@ -37,6 +37,7 @@ class WaveScalar{
   void annotateWaves(const Function &F, SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res);
   int isSameWave (Instruction* i, Instruction* e);
   int getWaveNo(std::string instruction);
+  int isSameWave (std::string i1, std::string i2);
 
  private:
   enum Color {WHITE, GREY, BLACK};
