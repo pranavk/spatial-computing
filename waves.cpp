@@ -34,7 +34,7 @@
 #include <map>
 #include <deque>
 
-#include "waves.h"
+#include "waves.hpp"
 
 using namespace llvm;
 

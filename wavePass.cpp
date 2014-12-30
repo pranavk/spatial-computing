@@ -26,7 +26,7 @@
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/GraphWriter.h"
 
-#include "waves.h"
+#include "waves.hpp"
 
 using namespace llvm;
 

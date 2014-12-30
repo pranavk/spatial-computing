@@ -16,7 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <vector>
-#include "waves.h"
+#include "waves.hpp"
 
 using namespace llvm;
 
