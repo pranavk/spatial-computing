@@ -27,8 +27,8 @@ class DFGWriter {
   raw_ostream &O;
   const DFG<Function*> &G;
 
-  typedef DOTGraphTraits<DFG<Function*> >           DOTTraits;
-  typedef GraphTraits<DFG<Function*> >              GTraits;
+  typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
+  typedef GraphTraits<DFG<Function*> >        GTraits;
   typedef typename GTraits::NodeType          NodeType;
   typedef typename GTraits::nodes_iterator    node_iterator;
   typedef typename GTraits::ChildIteratorType child_iterator;
