@@ -77,10 +77,6 @@ struct DataFlowGraph : public FunctionPass,
     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res = this;
     WaveScalar obj;
     obj.annotateWaves(F, res);
-    outs() << "Outputting CFG Only ...\n";
-    F.viewCFGOnly();
-    outs() << "Outputting CFG ...\n";
-    F.viewCFG();
 
     //    printInstructionsWithWaveNo(F, obj);
 
@@ -100,6 +96,9 @@ struct DataFlowGraph : public FunctionPass,
     std::string ErrorInfo;
     raw_fd_ostream File("dfg.dot", ErrorInfo);
     WriteDFG (File, (DFG<Function*>)&F, obj);
+
+    raw_fd_ostream File1("cfg.dot", ErrorInfo);
+    WriteGraph (File1, (const Function*)&F);
 
     return false;
   }
