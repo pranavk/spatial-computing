@@ -61,11 +61,13 @@ class DFGWriter {
     return hasEdgeSourceLabels;
   }
   WaveScalar &wavescalar;
+  DominatorTree &DT;
 public:
   DFGWriter(raw_ostream &o,
             const DFG<Function*> &g,
             bool SN,
-            WaveScalar &obj) : O(o), G(g), wavescalar(obj) {
+            WaveScalar &obj,
+            DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
     DTraits = DOTTraits(SN);
   }
 
@@ -259,9 +261,53 @@ public:
     if (SrcNodePort  > 64) return;             // Eminating from truncated part?
     if (DestNodePort > 64) DestNodePort = 64;  // Targeting the truncated part?
 
+    void *n1 = const_cast<void*>(SrcNodeID);
+    void *n2 = const_cast<void*>(DestNodeID);
+
+    NodeType *node1 = static_cast<NodeType*>(n1);
+    NodeType *node2 = static_cast<NodeType*>(n2);
+
+    Instruction *i1 = dyn_cast<Instruction>(node1);
+    Instruction *i2 = dyn_cast<Instruction>(node2);
+    BasicBlock *BB1 = i1->getParent();
+    BranchInst *br1 = dyn_cast<BranchInst>(BB1->getTerminator());
+
     O << "\tNode" << SrcNodeID;
     if (SrcNodePort >= 0)
       O << ":s" << SrcNodePort;
+
+    if (i2->getParent() != BB1 && br1->isConditional()){
+      Value *con = br1->getCondition();
+      Instruction *ins = dyn_cast<Instruction>(con);
+      BasicBlock *bb1 = br1->getSuccessor(0);
+      BasicBlock *bb2 = br1->getSuccessor(1);
+
+      const BasicBlockEdge bbtedge (BB1, bb1);
+      const BasicBlockEdge bbfedge (BB1, bb2);
+
+      std::string res;
+      raw_string_ostream rso(res);
+      ins->print(rso);
+
+      std::string tmp(res, 0, 4);
+
+      if (i2->getParent() == bb1){
+        // it is true immediate of i1
+        O << " -> \"STEER true by " << tmp << "," <<  rand() <<"\"";
+      }
+      else if (i2->getParent() == bb2){
+        // it is false immediate of i1
+        O << " -> \"STEER false by " << tmp << "," <<rand() <<"\"";
+      }
+      else if (DT.dominates(bbtedge, i2->getParent())){
+        O << " -> \"STEER[dominates] true by " << tmp << "," <<  rand() <<"\"";
+      }
+      else if (DT.dominates(bbfedge, i2->getParent())){
+        O << " -> \"STEER[dominates] false by " << tmp << "," <<  rand() <<"\"";
+      }
+
+    }
+
     O << " -> Node" << DestNodeID;
     if (DestNodePort >= 0 && DTraits.hasEdgeDestLabels())
       O << ":d" << DestNodePort;
@@ -281,10 +327,11 @@ public:
 raw_ostream &WriteDFG(raw_ostream &O,
                       const DFG<Function*> &G,
                       WaveScalar &wavescalar,
+                      DominatorTree& DT,
                       bool ShortNames = false,
                       const Twine &Title = "") {
   // Start the graph emission process...
-  DFGWriter W(O, G, ShortNames, wavescalar);
+  DFGWriter W(O, G, ShortNames, wavescalar, DT);
 
   // Emit the graph.
   W.writeGraph(Title.str());
