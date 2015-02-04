@@ -18,3 +18,5 @@ languages. Instead we just play with IR and proceed.
 Hence automatic hardware synthesis for procedures given in imperative languages
 can be used immensely to enhance the performance of ASICs using this dataflow
 computer architecture.
+
+You can read [this](http://pranavk.github.io/architecture/spatial-computing/) blog post giving an overview of the project.
