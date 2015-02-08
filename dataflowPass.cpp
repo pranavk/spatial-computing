@@ -102,10 +102,12 @@ struct DataFlowGraph : public FunctionPass,
     }
 
     std::string ErrorInfo;
-    raw_fd_ostream File("dfg.dot", ErrorInfo);
+    enum sys::fs::OpenFlags mode = sys::fs::F_RW;
+    raw_fd_ostream File("dfg.dot", ErrorInfo, mode);
     WriteDFG (File, (DFG<Function*>)&F, obj, DT);
 
-    raw_fd_ostream File1("cfg.dot", ErrorInfo);
+    mode = sys::fs::F_RW;
+    raw_fd_ostream File1("cfg.dot", ErrorInfo, mode);
     WriteGraph (File1, (const Function*)&F);
 
     return false;
