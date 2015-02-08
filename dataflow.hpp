@@ -63,8 +63,6 @@ namespace llvm {
     }
 
     static inline ChildIteratorType child_begin(NodeType *N){
-      Instruction *instr = dyn_cast<Instruction>(N);
-
       return N->use_begin();
     }
 
