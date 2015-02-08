@@ -33,65 +33,54 @@ public:
   T operator*() {return p;}
 };
 
-template<>
-struct DOTGraphTraits<DFG<Function*> > : public DefaultDOTGraphTraits{
-  explicit DOTGraphTraits(bool isSimple=false) : DefaultDOTGraphTraits(isSimple){}
 
-  static std::string getGraphName(DFG<Function*> F){
-    return "DFG for function \'" + F.getFunctionName() + "\'";
-  }
+namespace llvm {
+  template<>
+  struct DOTGraphTraits<DFG<Function*> > : public DefaultDOTGraphTraits{
+    explicit DOTGraphTraits(bool isSimple=false) : DefaultDOTGraphTraits(isSimple){}
 
-  static std::string getNodeLabel(Value *v, const DFG<Function*> &F){
-    Instruction *instr = dyn_cast<Instruction>(v);
-    std::string str;
-    raw_string_ostream rso(str);
-    instr->print(rso);
+    static std::string getGraphName(DFG<Function*> F){
+      return "DFG for function \'" + F.getFunctionName() + "\'";
+    }
 
-    return str;
-  }
-};
+    static std::string getNodeLabel(Value *v, const DFG<Function*> &F){
+      Instruction *instr = dyn_cast<Instruction>(v);
+      std::string str;
+      raw_string_ostream rso(str);
+      instr->print(rso);
 
-template<>
-struct GraphTraits<DFG<Function*> > {
-  typedef Value NodeType;
-  typedef Value::use_iterator ChildIteratorType;
+      return str;
+    }
+  };
 
-  static NodeType *getEntryNode(Value *G){
-    return G;
-  }
+  template<>
+  struct GraphTraits<DFG<Function*> > {
+    typedef Value NodeType;
+    typedef Value::use_iterator ChildIteratorType;
 
-  static inline ChildIteratorType child_begin(NodeType *N){
-    Instruction *instr = dyn_cast<Instruction>(N);
+    static NodeType *getEntryNode(Value *G){
+      return G;
+    }
 
-    return N->use_begin();
-  }
+    static inline ChildIteratorType child_begin(NodeType *N){
+      Instruction *instr = dyn_cast<Instruction>(N);
 
-  static inline ChildIteratorType child_end(NodeType *N){
-    return N->use_end();
-  }
+      return N->use_begin();
+    }
 
-  typedef inst_iterator nodes_iterator;
+    static inline ChildIteratorType child_end(NodeType *N){
+      return N->use_end();
+    }
 
-  static nodes_iterator nodes_begin(DFG<Function*> F){
-    return inst_begin(*F);
-  }
+    typedef inst_iterator nodes_iterator;
 
-  static nodes_iterator nodes_end(DFG<Function*> F){
-    return inst_end(*F);
-  }
-};
-/*
-class DFGWriter : public GraphWriter<DFG<Function*> > {
-  raw_ostream &O;
-public:
-  DFGWriter(raw_ostream &o, const DFG<Function*> &F, bool SN);
-  void writeHeader(const std::string &Title);
-  void writeGraph(const std::string &Title="");
-};
+    static nodes_iterator nodes_begin(DFG<Function*> F){
+      return inst_begin(*F);
+    }
 
-raw_ostream &WriteDFG(raw_ostream &O,
-                      const DFG<Function*> &G,
-                      bool shortNames = false,
-                      const Twine &Title = "");
-*/
+    static nodes_iterator nodes_end(DFG<Function*> F){
+      return inst_end(*F);
+    }
+  };
+}
 #endif
