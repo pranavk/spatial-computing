@@ -25,7 +25,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/DataFlow.h"
-#include "llvm/Analysis/Dominators.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Support/FileSystem.h"
 //#include "llvm/Support/GraphWriter.h"
 
 #include "DFGWriter.h"
@@ -71,16 +72,11 @@ struct DataFlowGraph : public FunctionPass,
   static char ID;
   DataFlowGraph() : FunctionPass(ID), SmallVectorImpl(10){}
 
-  virtual void getAnalysisUsage (AnalysisUsage &AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<DominatorTree>();
-  }
-
   bool runOnFunction(Function &F) {
     if (F.getName() == "main")
       return false;
 
-    DominatorTree& DT = getAnalysis<DominatorTree>();
+    const DominatorTree& DT = DominatorTree();
 
     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res = this;
     WaveScalar obj;

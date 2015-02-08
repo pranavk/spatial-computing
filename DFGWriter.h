@@ -61,13 +61,13 @@ class DFGWriter {
     return hasEdgeSourceLabels;
   }
   WaveScalar &wavescalar;
-  DominatorTree &DT;
+  const DominatorTree &DT;
 public:
   DFGWriter(raw_ostream &o,
             const DFG<Function*> &g,
             bool SN,
             WaveScalar &obj,
-            DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
+            const DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
     DTraits = DOTTraits(SN);
   }
 
@@ -327,7 +327,7 @@ public:
 raw_ostream &WriteDFG(raw_ostream &O,
                       const DFG<Function*> &G,
                       WaveScalar &wavescalar,
-                      DominatorTree& DT,
+                      const DominatorTree& DT,
                       bool ShortNames = false,
                       const Twine &Title = "") {
   // Start the graph emission process...
