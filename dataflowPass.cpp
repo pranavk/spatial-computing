@@ -24,10 +24,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/Support/DataFlow.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/FileSystem.h"
-//#include "llvm/Support/GraphWriter.h"
 
 #include "DFGWriter.h"
 #include "waves.hpp"
