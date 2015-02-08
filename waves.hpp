@@ -10,6 +10,8 @@
 #ifndef SPATIAL_WAVES_HPP
 #define SPATIAL_WAVES_HPP
 
+#include <deque>
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/PostOrderIterator.h"
