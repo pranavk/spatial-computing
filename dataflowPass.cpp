@@ -25,6 +25,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/DataFlow.h"
+#include "llvm/Analysis/Dominators.h"
 //#include "llvm/Support/GraphWriter.h"
 
 #include "DFGWriter.h"
@@ -70,17 +71,20 @@ struct DataFlowGraph : public FunctionPass,
   static char ID;
   DataFlowGraph() : FunctionPass(ID), SmallVectorImpl(10){}
 
+  virtual void getAnalysisUsage (AnalysisUsage &AU) const {
+    AU.setPreservesAll();
+    AU.addRequired<DominatorTree>();
+  }
+
   bool runOnFunction(Function &F) {
     if (F.getName() == "main")
       return false;
 
+    DominatorTree& DT = getAnalysis<DominatorTree>();
+
     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res = this;
     WaveScalar obj;
     obj.annotateWaves(F, res);
-    outs() << "Outputting CFG Only ...\n";
-    F.viewCFGOnly();
-    outs() << "Outputting CFG ...\n";
-    F.viewCFG();
 
     //    printInstructionsWithWaveNo(F, obj);
 
@@ -94,12 +98,15 @@ struct DataFlowGraph : public FunctionPass,
          iter != worklist.end();
          iter++){
       Instruction *instr = *iter;
-      //      printUses(instr);
+      printUses(instr);
     }
 
     std::string ErrorInfo;
     raw_fd_ostream File("dfg.dot", ErrorInfo);
-    WriteDFG (File, (DFG<Function*>)&F, obj);
+    WriteDFG (File, (DFG<Function*>)&F, obj, DT);
+
+    raw_fd_ostream File1("cfg.dot", ErrorInfo);
+    WriteGraph (File1, (const Function*)&F);
 
     return false;
   }
