@@ -29,6 +29,8 @@
 #include "llvm/Support/InstIterator.h"
 //#include "llvm/Support/GraphWriter.h"
 
+#include <deque>
+
 using namespace llvm;
 
 class WaveScalar{

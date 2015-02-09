@@ -26,15 +26,14 @@
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/GraphWriter.h"
 
+#include "waves.hpp"
+
 #include <string>
 #include <cstdio>
 #include <cstring>
 #include <sstream>
 #include <iostream>
 #include <map>
-#include <deque>
-
-#include "waves.hpp"
 
 using namespace llvm;
 
