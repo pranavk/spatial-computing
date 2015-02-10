@@ -132,8 +132,7 @@ void WaveScalar::setBackEdges (const Function &F, SmallVectorImpl<std::pair<cons
   }
 
 void WaveScalar::setLabel(BasicBlock **succ, unsigned k){
-    Twine twine(k);
-    (*succ)->setName(twine);
+    (*succ)->setName(Twine(k));
   }
 
 /*
