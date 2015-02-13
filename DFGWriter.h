@@ -18,6 +18,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
+#include <map>
+#include <string>
 #include "dataflow.hpp"
 #include "waves.hpp"
 
@@ -26,6 +28,7 @@ namespace llvm {
 class DFGWriter {
   raw_ostream &O;
   const DFG<Function*> &G;
+  std::map<Instruction*, std::map<std::string, int> > steerMap;
 
   typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
   typedef GraphTraits<DFG<Function*> >        GTraits;
@@ -69,6 +72,7 @@ public:
             WaveScalar &obj,
             DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
     DTraits = DOTTraits(SN);
+
   }
 
   void writeGraph(const std::string &Title = "") {
@@ -141,6 +145,11 @@ public:
 
   void writeNode(NodeType *Node) {
     std::string NodeAttributes = DTraits.getNodeAttributes(Node, G);
+
+    Instruction *i1 = dyn_cast<Instruction>(Node);
+    if(isa<BranchInst>(i1))
+      return;
+
 
     O << "\tNode" << static_cast<const void*>(Node) << " [shape=record,";
     if (!NodeAttributes.empty()) O << NodeAttributes << ",";
@@ -254,6 +263,8 @@ public:
     O << "\"];\n";
   }
 
+
+
   /// emitEdge - Output an edge from a simple node into the graph...
   void emitEdge(const void *SrcNodeID, int SrcNodePort,
                 const void *DestNodeID, int DestNodePort,
@@ -269,6 +280,11 @@ public:
 
     Instruction *i1 = dyn_cast<Instruction>(node1);
     Instruction *i2 = dyn_cast<Instruction>(node2);
+
+    if(isa<BranchInst>(i2)){
+      return;
+    }
+
     BasicBlock *BB1 = i1->getParent();
     BranchInst *br1 = dyn_cast<BranchInst>(BB1->getTerminator());
 
@@ -293,17 +309,47 @@ public:
 
       if (i2->getParent() == bb1){
         // it is true immediate of i1
-        O << " -> \"STEER true by " << tmp << "," <<  rand() <<"\"";
+        if (steerMap.find(i1) != steerMap.end()){
+          int no = steerMap[i1][tmp];
+          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
+        }else {
+          int no = rand();
+          steerMap[i1][tmp] = no;
+          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
+        }
       }
       else if (i2->getParent() == bb2){
         // it is false immediate of i1
-        O << " -> \"STEER false by " << tmp << "," <<rand() <<"\"";
+        if (steerMap.find(i1) != steerMap.end()){
+          int no = steerMap[i1][tmp];
+          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
+        }else {
+          int no = rand();
+          steerMap[i1][tmp] = no;
+          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
+        }
       }
       else if (DT.dominates(bbtedge, i2->getParent())){
-        O << " -> \"STEER[dominates] true by " << tmp << "," <<  rand() <<"\"";
+        //O << " -> \"STEERMAP[dominates] true by " << tmp << "," <<  rand() <<"\"";
+        if (steerMap.find(i1) != steerMap.end()){
+          int no = steerMap[i1][tmp];
+          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
+        }else {
+          int no = rand();
+          steerMap[i1][tmp] = no;
+          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
+        }
       }
       else if (DT.dominates(bbfedge, i2->getParent())){
-        O << " -> \"STEER[dominates] false by " << tmp << "," <<  rand() <<"\"";
+        //        O << " -> \"STEERMAP[dominates] false by " << tmp << "," <<  rand() <<"\"";
+        if (steerMap.find(i1) != steerMap.end()){
+          int no = steerMap[i1][tmp];
+          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
+        }else {
+          int no = rand();
+          steerMap[i1][tmp] = no;
+          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
+        }
       }
 
     }
