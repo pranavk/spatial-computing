@@ -29,7 +29,8 @@ class DFGWriter {
   raw_ostream &O;
   const DFG<Function*> &G;
   std::map<Instruction*, std::map<std::string, int> > steerMap;
-
+  int steerNo;
+  
   typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
   typedef GraphTraits<DFG<Function*> >        GTraits;
   typedef GTraits::NodeType          NodeType;
@@ -72,8 +73,8 @@ public:
             WaveScalar &obj,
             DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
     DTraits = DOTTraits(SN);
-
-  }
+    steerNo = 1;
+  }    
 
   void writeGraph(const std::string &Title = "") {
     // Output the header for the graph...
@@ -219,6 +220,15 @@ public:
         writeEdge(Node, 64, EI);
   }
 
+  void writeSteerNode(int sNo) {
+    if (!sNo)
+      return;
+    O << "\tNode0s" << sNo << " [shape=triangle,";
+    O << "label=\"";
+    O << "Steer";
+    O << "\"];\n";   // Finish printing the "node" line
+  }
+
   void writeEdge(NodeType *Node, unsigned edgeidx, child_iterator EI) {
     if (NodeType *TargetNode = *EI) {
       int DestPort = -1;
@@ -272,6 +282,8 @@ public:
     if (SrcNodePort  > 64) return;             // Eminating from truncated part?
     if (DestNodePort > 64) DestNodePort = 64;  // Targeting the truncated part?
 
+    int isSteer = 0;
+    
     void *n1 = const_cast<void*>(SrcNodeID);
     void *n2 = const_cast<void*>(DestNodeID);
 
@@ -307,50 +319,42 @@ public:
 
       std::string tmp(res, 0, 4);
 
-      if (i2->getParent() == bb1){
-        // it is true immediate of i1
-        if (steerMap.find(i1) != steerMap.end()){
+      if (steerMap.find(i1) != steerMap.end() && steerMap[i1].find(tmp) != steerMap[i1].end())
+        {
           int no = steerMap[i1][tmp];
-          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
-        }else {
-          int no = rand();
-          steerMap[i1][tmp] = no;
-          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
+          if (i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent())){
+            // for steer true;
+            O << " -> Node0s" << no << ":n;";
+            O << "\n";
+            O << "\t";
+            O << "Node0s" << no << ":sw";
+          }else if (i2->getParent() == bb2 || DT.dominates(bbfedge, i2->getParent())){
+            // for steer false;
+            O << " -> Node0s" << no << ":n;";
+            O << "\n";
+            O << "\t";
+            O << "Node0s" << no << ":se";
+          }
         }
-      }
-      else if (i2->getParent() == bb2){
-        // it is false immediate of i1
-        if (steerMap.find(i1) != steerMap.end()){
-          int no = steerMap[i1][tmp];
-          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
-        }else {
-          int no = rand();
+      else
+        {
+          int no = steerNo++;
           steerMap[i1][tmp] = no;
-          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
+          isSteer = no;
+          if (i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent())){
+            // for steer true;
+            O << " -> Node0s" << no << ":n;";
+            O << "\n";
+            O << "\t";
+            O << "Node0s" << no << ":sw";
+          }else if (i2->getParent() == bb2 || DT.dominates(bbfedge, i2->getParent())){
+            // for steer false;
+            O << " -> Node0s" << no << ":n;";
+            O << "\n";
+            O << "\t";
+            O << "Node0s" << no << ":se";
+          }
         }
-      }
-      else if (DT.dominates(bbtedge, i2->getParent())){
-        //O << " -> \"STEERMAP[dominates] true by " << tmp << "," <<  rand() <<"\"";
-        if (steerMap.find(i1) != steerMap.end()){
-          int no = steerMap[i1][tmp];
-          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
-        }else {
-          int no = rand();
-          steerMap[i1][tmp] = no;
-          O << " -> \"STEERMAP true by " << tmp << "," <<  no <<"\"";
-        }
-      }
-      else if (DT.dominates(bbfedge, i2->getParent())){
-        //        O << " -> \"STEERMAP[dominates] false by " << tmp << "," <<  rand() <<"\"";
-        if (steerMap.find(i1) != steerMap.end()){
-          int no = steerMap[i1][tmp];
-          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
-        }else {
-          int no = rand();
-          steerMap[i1][tmp] = no;
-          O << " -> \"STEERMAP false by " << tmp << "," <<  no <<"\"";
-        }
-      }
 
     }
 
@@ -361,6 +365,8 @@ public:
     if (!Attrs.empty())
       O << "[" << Attrs << "]";
     O << ";\n";
+    
+    writeSteerNode(isSteer);
   }
 
   /// getOStream - Get the raw output stream into the graph file. Useful to
