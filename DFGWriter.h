@@ -30,7 +30,9 @@ class DFGWriter {
   const DFG<Function*> &G;
   std::map<Instruction*, std::map<std::string, int> > steerMap;
   int steerNo;
-  
+  std::map<int, Instruction*> branchMap;
+  std::map<Instruction*, const void*> branchToID;
+
   typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
   typedef GraphTraits<DFG<Function*> >        GTraits;
   typedef GTraits::NodeType          NodeType;
@@ -74,7 +76,7 @@ public:
             DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
     DTraits = DOTTraits(SN);
     steerNo = 1;
-  }    
+  }
 
   void writeGraph(const std::string &Title = "") {
     // Output the header for the graph...
@@ -122,6 +124,10 @@ public:
          I != E; ++I)
       if (!isNodeHidden(*I))
         writeNode(*I);
+
+    for (std::map<int, Instruction*>::iterator it = branchMap.begin(); it!=branchMap.end(); it++){
+      O << "\tNode" << branchToID[it->second] << " -> " << "Node0s" << it->first << ":ne ;\n";
+    }
   }
 
   bool isNodeHidden(NodeType &Node) {
@@ -283,7 +289,7 @@ public:
     if (DestNodePort > 64) DestNodePort = 64;  // Targeting the truncated part?
 
     int isSteer = 0;
-    
+
     void *n1 = const_cast<void*>(SrcNodeID);
     void *n2 = const_cast<void*>(DestNodeID);
 
@@ -297,16 +303,20 @@ public:
       return;
     }
 
+    if(isa<CmpInst>(i2)){
+      branchToID[i2] = DestNodeID;
+    }
+
     BasicBlock *BB1 = i1->getParent();
     BranchInst *br1 = dyn_cast<BranchInst>(BB1->getTerminator());
 
     O << "\tNode" << SrcNodeID;
     if (SrcNodePort >= 0)
       O << ":s" << SrcNodePort;
-
+    Instruction *ins;
     if (i2->getParent() != BB1 && br1->isConditional()){
       Value *con = br1->getCondition();
-      Instruction *ins = dyn_cast<Instruction>(con);
+      ins = dyn_cast<Instruction>(con); //this is condition instruction.
       BasicBlock *bb1 = br1->getSuccessor(0);
       BasicBlock *bb2 = br1->getSuccessor(1);
 
@@ -365,7 +375,12 @@ public:
     if (!Attrs.empty())
       O << "[" << Attrs << "]";
     O << ";\n";
-    
+
+
+    if (isSteer){
+      branchMap[isSteer] = ins;
+    }
+
     writeSteerNode(isSteer);
   }
 
