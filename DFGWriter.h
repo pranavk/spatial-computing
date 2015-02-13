@@ -94,11 +94,11 @@ public:
     std::string GraphName = DTraits.getGraphName(G);
 
     if (!Title.empty())
-      O << "digraph \"" << DOT::EscapeString(Title) << "\" {\n";
+      O << "strict digraph \"" << DOT::EscapeString(Title) << "\" {\n";
     else if (!GraphName.empty())
-      O << "digraph \"" << DOT::EscapeString(GraphName) << "\" {\n";
+      O << "strict digraph \"" << DOT::EscapeString(GraphName) << "\" {\n";
     else
-      O << "digraph unnamed {\n";
+      O << "strict digraph unnamed {\n";
 
     if (DTraits.renderGraphFromBottomUp())
       O << "\trankdir=\"BT\";\n";
