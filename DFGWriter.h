@@ -28,7 +28,8 @@ namespace llvm {
 class DFGWriter {
   raw_ostream &O;
   const DFG<Function*> &G;
-  std::map<Instruction*, std::map<std::string, int> > steerMap;
+  // steerMap[Input instruction][select pin instruction (cmp)];
+  std::map<Instruction*, std::map<Instruction*, int> > steerMap;
   int steerNo;
   std::map<int, Instruction*> branchMap;
   std::map<Instruction*, const void*> branchToID;
@@ -323,15 +324,10 @@ public:
       const BasicBlockEdge bbtedge (BB1, bb1);
       const BasicBlockEdge bbfedge (BB1, bb2);
 
-      std::string res;
-      raw_string_ostream rso(res);
-      ins->print(rso);
-
-      std::string tmp(res, 0, 4);
-
-      if (steerMap.find(i1) != steerMap.end() && steerMap[i1].find(tmp) != steerMap[i1].end())
+      if (steerMap.find(i1) != steerMap.end() && steerMap[i1].find(ins) != steerMap[i1].end
+())
         {
-          int no = steerMap[i1][tmp];
+          int no = steerMap[i1][ins];
           if (i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent())){
             // for steer true;
             O << " -> Node0s" << no << ":n;";
@@ -349,7 +345,7 @@ public:
       else
         {
           int no = steerNo++;
-          steerMap[i1][tmp] = no;
+          steerMap[i1][ins] = no;
           isSteer = no;
           if (i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent())){
             // for steer true;
@@ -381,6 +377,8 @@ public:
       branchMap[isSteer] = ins;
     }
 
+    // This writes the steer node definition to dot file. isSteer contains the
+    // steer number of the node.
     writeSteerNode(isSteer);
   }
 
