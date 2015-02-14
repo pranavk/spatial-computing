@@ -31,8 +31,10 @@ class DFGWriter {
   // steerMap[Input instruction][select pin instruction (cmp)];
   std::map<Instruction*, std::map<Instruction*, int> > steerMap;
   int steerNo;
-  std::map<int, Instruction*> branchMap;
-  std::map<Instruction*, const void*> branchToID;
+  // this stores steer to select pin mapping.
+  std::map<int, Instruction*> steerPinMap;
+  // this stores mapping from condition instructions to their ID.
+  std::map<Instruction*, const void*> condToID;
 
   typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
   typedef GraphTraits<DFG<Function*> >        GTraits;
@@ -126,8 +128,8 @@ public:
       if (!isNodeHidden(*I))
         writeNode(*I);
 
-    for (std::map<int, Instruction*>::iterator it = branchMap.begin(); it!=branchMap.end(); it++){
-      O << "\tNode" << branchToID[it->second] << " -> " << "Node0s" << it->first << ":ne ;\n";
+    for (std::map<int, Instruction*>::iterator it = steerPinMap.begin(); it!=steerPinMap.end(); it++){
+      O << "\tNode" << condToID[it->second] << " -> " << "Node0s" << it->first << ":ne ;\n";
     }
   }
 
@@ -305,7 +307,7 @@ public:
     }
 
     if(isa<CmpInst>(i2)){
-      branchToID[i2] = DestNodeID;
+      condToID[i2] = DestNodeID;
     }
 
     BasicBlock *BB1 = i1->getParent();
@@ -374,7 +376,7 @@ public:
 
 
     if (isSteer){
-      branchMap[isSteer] = ins;
+      steerPinMap[isSteer] = ins;
     }
 
     // This writes the steer node definition to dot file. isSteer contains the
