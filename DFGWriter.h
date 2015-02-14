@@ -23,6 +23,9 @@
 #include "dataflow.hpp"
 #include "waves.hpp"
 
+typedef std::map<int, Instruction*> steerPinMap_t;
+typedef std::map<Instruction*, const void*> condToIDMap_t;
+
 namespace llvm {
 
 class DFGWriter {
@@ -32,9 +35,9 @@ class DFGWriter {
   std::map<Instruction*, std::map<Instruction*, int> > steerMap;
   int steerNo;
   // this stores steer to select pin mapping.
-  std::map<int, Instruction*> steerPinMap;
+  steerPinMap_t steerPinMap;
   // this stores mapping from condition instructions to their ID.
-  std::map<Instruction*, const void*> condToID;
+  condToIDMap_t condToID;
 
   typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
   typedef GraphTraits<DFG<Function*> >        GTraits;
@@ -128,7 +131,8 @@ public:
       if (!isNodeHidden(*I))
         writeNode(*I);
 
-    for (std::map<int, Instruction*>::iterator it = steerPinMap.begin(); it!=steerPinMap.end(); it++){
+    // Attaching select pin to all the steer nodes.
+    for (steerPinMap_t::iterator it = steerPinMap.begin(); it!=steerPinMap.end(); it++){
       O << "\tNode" << condToID[it->second] << " -> " << "Node0s" << it->first << ":ne ;\n";
     }
   }
