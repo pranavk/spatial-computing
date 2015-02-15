@@ -34,6 +34,7 @@ class DFGWriter {
   // steerMap[Input instruction][select pin instruction (cmp)];
   std::map<Instruction*, std::map<Instruction*, int> > steerMap;
   int steerNo;
+  int copyNo;
   // this stores steer to select pin mapping.
   steerPinMap_t steerPinMap;
   // this stores mapping from condition instructions to their ID.
@@ -241,6 +242,33 @@ public:
     O << "Steer";
     O << "\"];\n";   // Finish printing the "node" line
   }
+
+
+  void writeCopyNodes(int numCopies)
+  {
+    int numCopyNodes = (numCopies % 2 == 0) ? numCopyNodes = numCopies / 2 : numCopyNodes = numCopies / 2 + 1;
+    writeCopyNode();
+    // For using copy nodes generated this way, increment a variable from 1 to the current copy number while
+    // creating edges from its south-east and for the last node (which will have the current copy number)
+    // create edges for both se and sw.
+    for (;numCopyNodes > 1; numCopyNodes--)
+    {
+      O << " Node0c" << copyNo++ << ":sw";
+      O << "\n";
+      O << "\t";
+      O << "->" << "Node0c" << copyNo;
+      writeCopyNode();
+    }
+  }
+
+  void writeCopyNode()
+  {
+    O << "\tNode0c" << copyNo << " [shape=box,";
+    O << "label=\"";
+    O << "C";
+    O << "\"];\n";   // Finish printing the "node" line
+  }
+
 
   void writeEdge(NodeType *Node, unsigned edgeidx, child_iterator EI) {
     if (NodeType *TargetNode = *EI) {
