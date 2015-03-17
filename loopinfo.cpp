@@ -43,7 +43,7 @@ namespace {
       AU.setPreservesAll();
       AU.addRequired<LoopInfo>();
     }
-    
+
     virtual bool runOnFunction(Function &F) {
       LoopInfo &LI = getAnalysis<LoopInfo>();
       int k = 0;
@@ -52,7 +52,7 @@ namespace {
         bb->setName(Twine(k++));
       }
 
-      outs() << "Only below basic blocks are Loop Headers : \n";      
+      outs() << "Only below basic blocks are Loop Headers : \n";
       for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
         BasicBlock *bb = &*BBi;
         if(LI.isLoopHeader(bb)){
@@ -60,32 +60,64 @@ namespace {
         }
       }
 
-      outs() << "LoopDepth : Block number\tLoopDepth \n";      
+      outs() << "LoopDepth : Block number\tLoopDepth \n";
       for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
         BasicBlock *bb = &*BBi;
         unsigned depth = LI.getLoopDepth(bb);
         outs() <<  "\t\t"<<bb->getName() <<"\t\t\t" << depth<<"\n";
       }
 
+
+
+      /*
       outs() << "getLoopfor - Returns the innermost loop that BB lives in \n";
       for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
         BasicBlock *bb = &*BBi;
         Loop *loop = LI.getLoopFor(bb);
         outs() << "For BB : " << bb->getName() <<"\n";
+
+      }
+      */
+
+      LoopInfoBase<BasicBlock, Loop> &libase = LI.getBase();
+      libase.print(outs());
+      for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
+        BasicBlock *bb = &*BBi;
+        Loop *lo = libase.getLoopFor(bb);
+        lo->getCanonicalInductionVariable();
       }
 
-      
-      LoopInfoBase<BasicBlock, Loop> &libase = LI.getBase();
       typedef LoopInfoBase<BasicBlock, Loop>::iterator liBaseIt;
       for (liBaseIt it = libase.begin(), it_end = libase.end(); it!=it_end; it++){
         Loop *loop = *it;
         unsigned k =loop->getNumBackEdges();
         outs() << k << "\n";
-        if(loop->hasDedicatedExits())
-          outs() << "dedicated exists\n";
+        if (loop->isAnnotatedParallel())
+          outs() << "This is parallel\n";
+        else
+          outs() << "This is not parallel\n";
+
+
+
+        /*        for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
+          Instruction *instr = &*I;
+          bool changed;
+          if(loop->makeLoopInvariant(instr, changed)){
+            outs() << "make loop invariant\n";
+            std::string ppstr;
+            raw_string_ostream rso1(ppstr);
+            instr->print(rso1);
+
+            outs() << ppstr << "\n";
+          }
+          }*/
+
+        //PHINode *node = loop->getCanonicalInductionVariable();
+
+
       }
-      
-      
+
+
       outs() << "Outputting CFG ...\n";
       std::string ErrorInfo;
       raw_fd_ostream File1("cfg.dot", ErrorInfo);
