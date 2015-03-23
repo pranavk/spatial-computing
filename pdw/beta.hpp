@@ -17,5 +17,5 @@ class Beta : public BaseNode {
 	void *P, *vinit, *vnext;
 	void *out;
 
-	SwitchTrue() : BaseNode(3, 1, "beta") { first = TRUE;} 
+	Beta() : BaseNode(3, 1, "beta") { first = TRUE;} 
 }
