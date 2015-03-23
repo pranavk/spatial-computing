@@ -10,11 +10,12 @@
 #include "base_node.hpp"
 
 class SwitchFalse : public BaseNode {
-	int P,v;
+	bool P;
+	int v;
 	int out;
 
 	void *P, *v;
 	void *out;
 
-	SwitchTrue() : BaseNode(2, 1, switchfalse) {} 
+	SwitchTrue() : BaseNode(2, 1, "switchfalse") {} 
 }
