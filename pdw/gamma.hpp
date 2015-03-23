@@ -17,5 +17,5 @@ class Gamma : public BaseNode {
 	void *P, *vtrue, *vfalse;
 	void *out;
 
-	SwitchTrue() : BaseNode(3, 1, "gamma") {} 
+	Gamma() : BaseNode(3, 1, "gamma") {} 
 }
