@@ -10,11 +10,12 @@
 #include "base_node.hpp"
 
 class Gamma : public BaseNode {
-	int P, vtrue, vfalse;
+	bool P;
+	int vtrue, vfalse;
 	int out;
 
 	void *P, *vtrue, *vfalse;
 	void *out;
 
-	SwitchTrue() : BaseNode(3, 1, gamma) {} 
+	SwitchTrue() : BaseNode(3, 1, "gamma") {} 
 }
