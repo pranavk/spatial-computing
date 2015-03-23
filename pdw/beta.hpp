@@ -10,12 +10,12 @@
 #include "base_node.hpp"
 
 class Beta : public BaseNode {
-	int P, vinit, vnext;
-	bool first;
+	int vinit, vnext;
+	bool P, first;
 	int out;
 
 	void *P, *vinit, *vnext;
 	void *out;
 
-	SwitchTrue() : BaseNode(3, 1, beta) { first = TRUE;} 
+	SwitchTrue() : BaseNode(3, 1, "beta") { first = TRUE;} 
 }
