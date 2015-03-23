@@ -15,6 +15,7 @@ class BaseNode
   int out_edges;
   std::string name;
 public:
+  BaseNode(int in_edges, int out_edges, std::string name) : in_edges(in_edges), out_edges(out_edges), name(name) {}
   int get_no_of_in_edges ();
   int get_no_of_out_edges ();
   int get_name ();
