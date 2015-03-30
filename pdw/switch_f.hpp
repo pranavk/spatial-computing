@@ -14,8 +14,8 @@ class SwitchFalse : public BaseNode {
 	int v;
 	int out;
 
-	void *P, *v;
-	void *out;
+	void *P_ptr, *v_ptr;
+	void *out_ptr;
 
 	SwitchFalse() : BaseNode(2, 1, "switchfalse") {} 
-}
+};

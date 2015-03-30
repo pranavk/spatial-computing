@@ -14,8 +14,8 @@ class Beta : public BaseNode {
 	bool P, first;
 	int out;
 
-	void *P, *vinit, *vnext;
-	void *out;
+	void *P_ptr, *vinit_ptr, *vnext_ptr;
+	void *out_ptr;
 
-	Beta() : BaseNode(3, 1, "beta") { first = TRUE;} 
-}
+	Beta() : BaseNode(3, 1, "beta") { first = true;}
+};

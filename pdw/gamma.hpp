@@ -14,8 +14,8 @@ class Gamma : public BaseNode {
 	int vtrue, vfalse;
 	int out;
 
-	void *P, *vtrue, *vfalse;
-	void *out;
+	void *P_ptr, *vtrue_ptr, *vfalse_ptr;
+	void *out_ptr;
 
 	Gamma() : BaseNode(3, 1, "gamma") {} 
-}
+};
