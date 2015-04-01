@@ -17,6 +17,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <sstream>
 #include <vector>
 #include <map>
 #include <string>
@@ -31,15 +32,12 @@ namespace llvm {
 class DFGWriter {
   raw_ostream &O;
   const DFG<Function*> &G;
-  // steerMap[Input instruction][select pin instruction (cmp)];
-  std::map<Instruction*, std::map<Instruction*, int> > steerMap;
-  int steerNo;
-  int copyNo;
-  // this stores steer to select pin mapping.
+  //instruction to beta_alpha pair.
+  std::map<Instruction*, int> instTobaMap;
+  std::map<Instruction*, std::string> instToIDMap;
   steerPinMap_t steerPinMap;
-  // this stores mapping from condition instructions to their ID.
-  condToIDMap_t condToID;
-
+  int baID;
+  
   typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
   typedef GraphTraits<DFG<Function*> >        GTraits;
   typedef GTraits::NodeType          NodeType;
@@ -82,7 +80,6 @@ public:
             WaveScalar &obj,
             DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
     DTraits = DOTTraits(SN);
-    steerNo = 1;
   }
 
   void writeGraph(const std::string &Title = "") {
@@ -126,16 +123,23 @@ public:
   }
 
   void writeNodes() {
+    for (node_iterator I = GTraits::nodes_begin(G), E = GTraits::nodes_end(G);
+         I != E; ++I){
+      Instruction *inst = &*I;
+      std::stringstream ss;
+      ss << inst;
+      std::string str = ss.str();
+      instToIDMap[inst] = str;
+    }
+    
     // Loop over the graph, printing it out...
     for (node_iterator I = GTraits::nodes_begin(G), E = GTraits::nodes_end(G);
-         I != E; ++I)
-      if (!isNodeHidden(*I))
+         I != E; ++I){
+      if (!isNodeHidden(*I)){
         writeNode(*I);
-
-    // Attaching select pin to all the steer nodes.
-    for (steerPinMap_t::iterator it = steerPinMap.begin(); it!=steerPinMap.end(); it++){
-      O << "\tNode" << condToID[it->second] << " -> " << "Node0s" << it->first << ":ne ;\n";
+      }
     }
+
   }
 
   bool isNodeHidden(NodeType &Node) {
@@ -165,63 +169,28 @@ public:
     if(isa<BranchInst>(i1))
       return;
 
+    if(!isa<PHINode>(i1)){
+      O << "\tNode" << static_cast<const void*>(Node) << " [shape=record,";
+      if (!NodeAttributes.empty()) O << NodeAttributes << ",";
+      O << "label=\"{";
+      
 
-    O << "\tNode" << static_cast<const void*>(Node) << " [shape=record,";
-    if (!NodeAttributes.empty()) O << NodeAttributes << ",";
-    O << "label=\"{";
-
-    if (!DTraits.renderGraphFromBottomUp()) {
-      O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
-
-      // If we should include the address of the node in the label, do so now.
-      if (DTraits.hasNodeAddressLabel(Node, G))
-        O << "|" << static_cast<const void*>(Node);
-
-      std::string NodeDesc = DTraits.getNodeDescription(Node, G);
-      if (!NodeDesc.empty())
-        O << "|" << DOT::EscapeString(NodeDesc);
-    }
-
-    std::string edgeSourceLabels;
-    raw_string_ostream EdgeSourceLabels(edgeSourceLabels);
-    bool hasEdgeSourceLabels = getEdgeSourceLabels(EdgeSourceLabels, Node);
-
-    if (hasEdgeSourceLabels) {
-      if (!DTraits.renderGraphFromBottomUp()) O << "|";
-
-      O << "{" << EdgeSourceLabels.str() << "}";
-
-      if (DTraits.renderGraphFromBottomUp()) O << "|";
-    }
-
-    if (DTraits.renderGraphFromBottomUp()) {
-      O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
-
-      // If we should include the address of the node in the label, do so now.
-      if (DTraits.hasNodeAddressLabel(Node, G))
-        O << "|" << static_cast<const void*>(Node);
-
-      std::string NodeDesc = DTraits.getNodeDescription(Node, G);
-      if (!NodeDesc.empty())
-        O << "|" << DOT::EscapeString(NodeDesc);
-    }
-
-    if (DTraits.hasEdgeDestLabels()) {
-      O << "|{";
-
-      unsigned i = 0, e = DTraits.numEdgeDestLabels(Node);
-      for (; i != e && i != 64; ++i) {
-        if (i) O << "|";
-        O << "<d" << i << ">"
-          << DOT::EscapeString(DTraits.getEdgeDestLabel(Node, i));
+      if (!DTraits.renderGraphFromBottomUp()) {
+        O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
+        
+        // If we should include the address of the node in the label, do so now.
+        if (DTraits.hasNodeAddressLabel(Node, G))
+          O << "|" << static_cast<const void*>(Node);
+        
+        std::string NodeDesc = DTraits.getNodeDescription(Node, G);
+        if (!NodeDesc.empty())
+          O << "|" << DOT::EscapeString(NodeDesc);
       }
-
-      if (i != e)
-        O << "|<d64>truncated...";
-      O << "}";
+          O << "}\"];\n";   // Finish printing the "node" line
     }
 
-    O << "}\"];\n";   // Finish printing the "node" line
+
+
 
     // Output all of the edges now
     child_iterator EI = GTraits::child_begin(Node);
@@ -243,29 +212,17 @@ public:
     O << "\"];\n";   // Finish printing the "node" line
   }
 
-
-  void writeCopyNodes(int numCopies)
-  {
-    int numCopyNodes = (numCopies % 2 == 0) ? numCopyNodes = numCopies / 2 : numCopyNodes = numCopies / 2 + 1;
-    writeCopyNode();
-    // For using copy nodes generated this way, increment a variable from 1 to the current copy number while
-    // creating edges from its south-east and for the last node (which will have the current copy number)
-    // create edges for both se and sw.
-    for (;numCopyNodes > 1; numCopyNodes--)
-    {
-      O << " Node0c" << copyNo++ << ":sw";
-      O << "\n";
-      O << "\t";
-      O << "->" << "Node0c" << copyNo;
-      writeCopyNode();
-    }
-  }
-
-  void writeCopyNode()
-  {
-    O << "\tNode0c" << copyNo << " [shape=box,";
+  void writeBetaAlphaNode(int sNo) {
+    if (!sNo)
+      return;
+    O << "\tNode0b" << sNo << " [shape=rectangle,";
     O << "label=\"";
-    O << "C";
+    O << "Beta";
+    O << "\"];\n";   // Finish printing the "node" line
+
+    O << "\tNode0a" << sNo << " [shape=rectangle,";
+    O << "label=\"";
+    O << "Alpha";
     O << "\"];\n";   // Finish printing the "node" line
   }
 
@@ -334,86 +291,85 @@ public:
     Instruction *i1 = dyn_cast<Instruction>(node1);
     Instruction *i2 = dyn_cast<Instruction>(node2);
 
-    if(isa<BranchInst>(i2)){
+    if(isa<BranchInst>(i2) || isa<PHINode>(i2))
       return;
-    }
 
-    if(isa<CmpInst>(i2)){
-      condToID[i2] = DestNodeID;
-    }
-
+    
     BasicBlock *BB1 = i1->getParent();
     BranchInst *br1 = dyn_cast<BranchInst>(BB1->getTerminator());
 
-    O << "\tNode" << SrcNodeID;
-    if (SrcNodePort >= 0)
-      O << ":s" << SrcNodePort;
-    Instruction *ins;
-    if (i2->getParent() != BB1 && br1->isConditional()){
-      Value *con = br1->getCondition();
-      ins = dyn_cast<Instruction>(con); //this is condition instruction.
-      BasicBlock *bb1 = br1->getSuccessor(0);
-      BasicBlock *bb2 = br1->getSuccessor(1);
+    int isba = 0;
+    //    int baID = instTobaMap[i1];
+    if (isa<PHINode>(i1)){
+      
+      int baID;
+      if(instTobaMap.find(i1) != instTobaMap.end()){
+        baID = instTobaMap[i1];
+      }else{
+        baID = isba = instTobaMap[i1] = rand()%99999;
+      }
+      
+      // vinit 
+      //      O << "N0 -> Node0b" << baID << ":nw;\n";
+      //      
+      //viter
+      Instruction *viter;
+      for (User::op_iterator it = i1->op_begin(), e = i1->op_end(); it!=e; it++){
+        Instruction *vi = dyn_cast<Instruction>(*it);
+        viter = vi;
+      }
+      O << "\tNode" << instToIDMap[viter];
+      O << " -> Node0b" << baID << ":ne;\n";
 
-      const BasicBlockEdge bbtedge (BB1, bb1);
-      const BasicBlockEdge bbfedge (BB1, bb2);
+      // lets write the predicate to alpha and beta nodes.
+      Instruction *vi = dyn_cast<Instruction>(br1);
+      Instruction *vi_tmp;
+      for (User::op_iterator it = vi->op_begin(), e = vi->op_end(); it!=e; it++){
+        vi_tmp = dyn_cast<Instruction>(*it);
+        break;
+      }
+      O << "\tNode" << instToIDMap[vi_tmp];
+      O << " -> Node0b" << baID << ":w;\n";
+      
+      O << "\tNode0b" << baID << ":s";
 
-      if (steerMap.find(i1) != steerMap.end() && steerMap[i1].find(ins) != steerMap[i1].end
-())
-        {
-          int no = steerMap[i1][ins];
-          if (i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent())){
-            // for steer true;
-            O << " -> Node0s" << no << ":n;";
-            O << "\n";
-            O << "\t";
-            O << "Node0s" << no << ":sw";
-          }else if (i2->getParent() == bb2 || DT.dominates(bbfedge, i2->getParent())){
-            // for steer false;
-            O << " -> Node0s" << no << ":n;";
-            O << "\n";
-            O << "\t";
-            O << "Node0s" << no << ":se";
-          }
+      Instruction *ins;
+      if (i2->getParent() != BB1 && br1->isConditional()){
+        Value *con = br1->getCondition();
+        ins = dyn_cast<Instruction>(con); //this is condition instruction.
+        BasicBlock *bb1 = br1->getSuccessor(0);
+        BasicBlock *bb2 = br1->getSuccessor(1);
+        
+        const BasicBlockEdge bbtedge (BB1, bb1);
+        const BasicBlockEdge bbfedge (BB1, bb2);
+        
+        // connecting beta output to alpha nodes;
+        O << " -> Node0a" << baID << ":n;\n";
+
+        Instruction *vi = dyn_cast<Instruction>(br1);
+        Instruction *vi_tmp;
+        for (User::op_iterator it = vi->op_begin(), e = vi->op_end(); it!=e; it++){
+          vi_tmp = dyn_cast<Instruction>(*it);
+          break;
         }
-      else
-        {
-          int no = steerNo++;
-          steerMap[i1][ins] = no;
-          isSteer = no;
-          if (i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent())){
-            // for steer true;
-            O << " -> Node0s" << no << ":n;";
-            O << "\n";
-            O << "\t";
-            O << "Node0s" << no << ":sw";
-          }else if (i2->getParent() == bb2 || DT.dominates(bbfedge, i2->getParent())){
-            // for steer false;
-            O << " -> Node0s" << no << ":n;";
-            O << "\n";
-            O << "\t";
-            O << "Node0s" << no << ":se";
-          }
-        }
+        O << "\tNode" << instToIDMap[vi_tmp];
+        O << " -> Node0a" << baID << ":w;\n";
+        
+        if(i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent()))
+          O << "\tNode0a" << baID << ":sw";
+        else if (i2->getParent() == bb2 || DT.dominates(bbfedge, i2->getParent()))
+          O << "\tNode0a" << baID << ":se";
+      } //end if
 
+      
+    }else{
+      O << "\tNode" << SrcNodeID << ":s";
     }
 
-    O << " -> Node" << DestNodeID;
-    if (DestNodePort >= 0 && DTraits.hasEdgeDestLabels())
-      O << ":d" << DestNodePort;
+    
+    O << " -> Node" << DestNodeID << ";\n";
 
-    if (!Attrs.empty())
-      O << "[" << Attrs << "]";
-    O << ";\n";
-
-
-    if (isSteer){
-      steerPinMap[isSteer] = ins;
-    }
-
-    // This writes the steer node definition to dot file. isSteer contains the
-    // steer number of the node.
-    writeSteerNode(isSteer);
+    writeBetaAlphaNode(isba);
   }
 
   /// getOStream - Get the raw output stream into the graph file. Useful to
