@@ -123,7 +123,7 @@ void WaveScalar::setIMap(BasicBlock* bb, unsigned waveNo){
   }
 
 void WaveScalar::setBackEdges (const Function &F, SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res){
-    FindFunctionBackedges(F, *res);
+  //    FindFunctionBackedges(F, *res);
     while (!res->empty()){
       std::pair<const BasicBlock*, const BasicBlock*> tempPair = res->pop_back_val();
       BEMap[tempPair.first] = 0;

@@ -52,6 +52,22 @@ namespace {
         bb->setName(Twine(k++));
       }
 
+      for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
+        Instruction *instr = &*I;
+
+          PHINode *phi = dyn_cast<PHINode>(instr);
+          outs() << *instr << "\n";
+          for (User::op_iterator it = instr->op_begin(), e = instr->op_end(); it!=e; it++){
+            Instruction *vi = dyn_cast<Instruction>(*it);
+            if(vi == NULL) {
+              outs () << "\t\tNULL\n" ;
+              continue;
+            }
+            outs() << "\t\t" << *vi << "\n";
+
+        }
+      }
+    
       outs() << "Only below basic blocks are Loop Headers : \n";
       for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
         BasicBlock *bb = &*BBi;
@@ -81,14 +97,15 @@ namespace {
 
       LoopInfoBase<BasicBlock, Loop> &libase = LI.getBase();
       libase.print(outs());
-      for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
+
+      /*for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
         BasicBlock *bb = &*BBi;
         Loop *lo = libase.getLoopFor(bb);
         lo->getCanonicalInductionVariable();
       }
-
+      */
       typedef LoopInfoBase<BasicBlock, Loop>::iterator liBaseIt;
-      for (liBaseIt it = libase.begin(), it_end = libase.end(); it!=it_end; it++){
+      for (liBaseIt it = LI.begin(), it_end = LI.end(); it!=it_end; it++){
         Loop *loop = *it;
         unsigned k =loop->getNumBackEdges();
         outs() << k << "\n";
@@ -97,7 +114,7 @@ namespace {
         else
           outs() << "This is not parallel\n";
 
-
+        
 
         /*        for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
           Instruction *instr = &*I;
