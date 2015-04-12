@@ -73,12 +73,14 @@ class DFGWriter {
   }
   WaveScalar &wavescalar;
   DominatorTree &DT;
+  LoopInfo &LI;
 public:
   DFGWriter(raw_ostream &o,
             const DFG<Function*> &g,
             bool SN,
             WaveScalar &obj,
-            DominatorTree &dt) : O(o), G(g), wavescalar(obj), DT(dt) {
+            DominatorTree &dt,
+            LoopInfo &li) : O(o), G(g), wavescalar(obj), DT(dt), LI(li)  {
     DTraits = DOTTraits(SN);
   }
 
@@ -300,71 +302,16 @@ public:
 
     int isba = 0;
     //    int baID = instTobaMap[i1];
-    if (isa<PHINode>(i1)){
-      
-      int baID;
-      if(instTobaMap.find(i1) != instTobaMap.end()){
-        baID = instTobaMap[i1];
-      }else{
-        baID = isba = instTobaMap[i1] = rand()%99999;
-      }
-      
-      // vinit 
-      //      O << "N0 -> Node0b" << baID << ":nw;\n";
-      //      
-      //viter
-      Instruction *viter;
-      for (User::op_iterator it = i1->op_begin(), e = i1->op_end(); it!=e; it++){
-        Instruction *vi = dyn_cast<Instruction>(*it);
-        viter = vi;
-      }
-      O << "\tNode" << instToIDMap[viter];
-      O << " -> Node0b" << baID << ":ne;\n";
 
-      // lets write the predicate to alpha and beta nodes.
-      Instruction *vi = dyn_cast<Instruction>(br1);
-      Instruction *vi_tmp;
-      for (User::op_iterator it = vi->op_begin(), e = vi->op_end(); it!=e; it++){
-        vi_tmp = dyn_cast<Instruction>(*it);
-        break;
-      }
-      O << "\tNode" << instToIDMap[vi_tmp];
-      O << " -> Node0b" << baID << ":w;\n";
-      
-      O << "\tNode0b" << baID << ":s";
+    /*
+      For conditional blocks:
+      getLoopDepth is used to check if both the instructions, i1 and i2 are
+      outside the loop. Follow the algorithm when both are outside the loop.
+     */
 
-      Instruction *ins;
-      if (i2->getParent() != BB1 && br1->isConditional()){
-        Value *con = br1->getCondition();
-        ins = dyn_cast<Instruction>(con); //this is condition instruction.
-        BasicBlock *bb1 = br1->getSuccessor(0);
-        BasicBlock *bb2 = br1->getSuccessor(1);
-        
-        const BasicBlockEdge bbtedge (BB1, bb1);
-        const BasicBlockEdge bbfedge (BB1, bb2);
-        
-        // connecting beta output to alpha nodes;
-        O << " -> Node0a" << baID << ":n;\n";
 
-        Instruction *vi = dyn_cast<Instruction>(br1);
-        Instruction *vi_tmp;
-        for (User::op_iterator it = vi->op_begin(), e = vi->op_end(); it!=e; it++){
-          vi_tmp = dyn_cast<Instruction>(*it);
-          break;
-        }
-        O << "\tNode" << instToIDMap[vi_tmp];
-        O << " -> Node0a" << baID << ":w;\n";
-        
-        if(i2->getParent() == bb1 || DT.dominates(bbtedge, i2->getParent()))
-          O << "\tNode0a" << baID << ":sw";
-        else if (i2->getParent() == bb2 || DT.dominates(bbfedge, i2->getParent()))
-          O << "\tNode0a" << baID << ":se";
-      } //end if
-
-      
-    }else{
-      O << "\tNode" << SrcNodeID << ":s";
-    }
+    
+    
 
     
     O << " -> Node" << DestNodeID << ";\n";
@@ -383,10 +330,11 @@ raw_ostream &WriteDFG(raw_ostream &O,
                       const DFG<Function*> &G,
                       WaveScalar &wavescalar,
                       DominatorTree& DT,
+                      LoopInfo& LI,
                       bool ShortNames = false,
                       const Twine &Title = "") {
   // Start the graph emission process...
-  DFGWriter W(O, G, ShortNames, wavescalar, DT);
+  DFGWriter W(O, G, ShortNames, wavescalar, DT, LI);
 
   // Emit the graph.
   W.writeGraph(Title.str());

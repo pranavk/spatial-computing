@@ -23,6 +23,7 @@
 #include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/DataFlow.h"
 #include "llvm/Analysis/Dominators.h"
@@ -74,6 +75,7 @@ struct DataFlowGraph : public FunctionPass,
   virtual void getAnalysisUsage (AnalysisUsage &AU) const {
     AU.setPreservesAll();
     AU.addRequired<DominatorTree>();
+    AU.addRequired<LoopInfo>();
   }
 
   bool runOnFunction(Function &F) {
@@ -81,7 +83,8 @@ struct DataFlowGraph : public FunctionPass,
       return false;
 
     DominatorTree& DT = getAnalysis<DominatorTree>();
-
+    LoopInfo& LI = getAnalysis<LoopInfo>();
+    
     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res = this;
     WaveScalar obj;
     obj.annotateWaves(F, res);
@@ -103,7 +106,7 @@ struct DataFlowGraph : public FunctionPass,
 
     std::string ErrorInfo;
     raw_fd_ostream File("dfg.dot", ErrorInfo);
-    WriteDFG (File, (DFG<Function*>)&F, obj, DT);
+    WriteDFG (File, (DFG<Function*>)&F, obj, DT, LI);
 
     raw_fd_ostream File1("cfg.dot", ErrorInfo);
     WriteGraph (File1, (const Function*)&F);
