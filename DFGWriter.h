@@ -26,6 +26,14 @@
 
 typedef std::map<int, Instruction*> steerPinMap_t;
 typedef std::map<Instruction*, const void*> condToIDMap_t;
+typedef std::map<Instruction*, int> phi_gamma_t;
+typedef std::map<Instruction*, int> beta_t;
+typedef std::map<Instruction*, int> alpha_t;
+
+typedef struct NodePred{
+  int sno;
+  Instruction *predicate;
+} NodePred_t;
 
 namespace llvm {
 
@@ -35,9 +43,18 @@ class DFGWriter {
   //instruction to beta_alpha pair.
   std::map<Instruction*, int> instTobaMap;
   std::map<Instruction*, std::string> instToIDMap;
+
   steerPinMap_t steerPinMap;
+  phi_gamma_t phi_gamma;
+  beta_t beta;
+  alpha_t alpha;
+
   int baID;
-  
+  int beta_id;
+  int alpha_id;
+  int phi_gamma_id;
+  int delta_id;
+
   typedef DOTGraphTraits<DFG<Function*> >     DOTTraits;
   typedef GraphTraits<DFG<Function*> >        GTraits;
   typedef GTraits::NodeType          NodeType;
@@ -82,6 +99,47 @@ public:
             DominatorTree &dt,
             LoopInfo &li) : O(o), G(g), wavescalar(obj), DT(dt), LI(li)  {
     DTraits = DOTTraits(SN);
+    phi_gamma_id = 1;
+    delta_id = 1;
+    beta_id=1;
+    alpha_id =1;
+  }
+
+  /*
+    Finds the predicate by reverse iterating for given phi node.
+    This algorithm is usually used when instr = PHI node.
+   */
+  Instruction *findPredicate_revIterate(Instruction *instr) {
+    BasicBlock *BB = instr->getParent();
+    BasicBlock *bb = BB;
+
+    while ((bb = bb->getSinglePredecessor()) != NULL) {
+
+    }
+
+  }
+
+
+  /*
+    Finds the predicate instruction, if any, inside the basic block containing instr.
+   */
+  Instruction *findPredicate_sameBlock(Instruction *instr) {
+    BasicBlock *BB = instr->getParent();
+    Instruction *predicate = NULL;
+    for(BasicBlock::iterator i = BB->begin(), ie= BB->end(); i!=ie; ++i ){
+      Instruction *inst = &*i;
+      if(isa<BranchInst>(inst)){
+        BranchInst *br = dyn_cast<BranchInst>(inst);
+        if(br->isConditional()){
+          Value *condition = br->getCondition();
+          predicate = dyn_cast<Instruction>(condition);
+          return predicate;
+        }
+
+      }
+
+    }// for end
+    return predicate;
   }
 
   void writeGraph(const std::string &Title = "") {
@@ -133,7 +191,7 @@ public:
       std::string str = ss.str();
       instToIDMap[inst] = str;
     }
-    
+
     // Loop over the graph, printing it out...
     for (node_iterator I = GTraits::nodes_begin(G), E = GTraits::nodes_end(G);
          I != E; ++I){
@@ -175,15 +233,15 @@ public:
       O << "\tNode" << static_cast<const void*>(Node) << " [shape=record,";
       if (!NodeAttributes.empty()) O << NodeAttributes << ",";
       O << "label=\"{";
-      
+
 
       if (!DTraits.renderGraphFromBottomUp()) {
         O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
-        
+
         // If we should include the address of the node in the label, do so now.
         if (DTraits.hasNodeAddressLabel(Node, G))
           O << "|" << static_cast<const void*>(Node);
-        
+
         std::string NodeDesc = DTraits.getNodeDescription(Node, G);
         if (!NodeDesc.empty())
           O << "|" << DOT::EscapeString(NodeDesc);
@@ -214,6 +272,37 @@ public:
     O << "\"];\n";   // Finish printing the "node" line
   }
 
+  void writeBetaNode(NodePred_t stru) {
+    int sNo = stru.sno;
+    Instruction* predicate = stru.predicate;
+
+    if(!sNo)
+      return;
+    O << "\tNode0b" << sNo << " [shape=rectangle,";
+    O << "label=\"";
+    O << "Beta";
+    O << "\"];\n";   // Finish printing the "node" line
+
+    //feed the predicate:
+    O << "\tNode" << instToIDMap[predicate] << " -> ";
+    O << "Node0b" << sNo << ":w;\n";
+  }
+
+  void writeAlphaNode(NodePred_t stru) {
+    int sNo = stru.sno;
+    Instruction* predicate = stru.predicate;
+    if(!sNo)
+      return;
+    O << "\tNode0a" << sNo << " [shape=rectangle,";
+    O << "label=\"";
+    O << "Alpha";
+    O << "\"];\n";   // Finish printing the "node" line
+
+    //feed the predicate:
+    O << "\tNode" << instToIDMap[predicate] << " -> ";
+    O << "Node0a" << sNo << ":w;\n";
+  }
+  
   void writeBetaAlphaNode(int sNo) {
     if (!sNo)
       return;
@@ -226,6 +315,32 @@ public:
     O << "label=\"";
     O << "Alpha";
     O << "\"];\n";   // Finish printing the "node" line
+  }
+
+  void writeGammaNode(int sNo, Instruction *predicate){
+    if (!sNo)
+      return;
+    O << "\tNode0g" << sNo << " [shape=rectangle," ;
+    O << "label=\"";
+    O << "Gamma";
+    O << "\"];\n"; //finish printing the node.
+
+    //feed the predicate:
+    O << "\tNode" << instToIDMap[predicate] << " -> ";
+    O << "Node0g" << sNo << ":w;\n";
+  }
+
+  void writeDeltaNode(int sNo, Instruction *predicate){
+    if (!sNo)
+      return;
+    O << "\tNode0d" << sNo << " [shape=rectangle," ;
+    O << "label=\"";
+    O << "Delta";
+    O << "\"];\n"; //finish printing the node.
+
+    //feed the predicate:
+    O << "\tNode" << instToIDMap[predicate] << " -> ";
+    O << "Node0d" << sNo << ":w;\n";
   }
 
 
@@ -284,6 +399,8 @@ public:
 
     int isSteer = 0;
 
+    //    O << "\tNode" << SrcNodeID;
+    
     void *n1 = const_cast<void*>(SrcNodeID);
     void *n2 = const_cast<void*>(DestNodeID);
 
@@ -293,30 +410,245 @@ public:
     Instruction *i1 = dyn_cast<Instruction>(node1);
     Instruction *i2 = dyn_cast<Instruction>(node2);
 
-    if(isa<BranchInst>(i2) || isa<PHINode>(i2))
+    if (isa<BranchInst>(i2))
       return;
-
     
     BasicBlock *BB1 = i1->getParent();
-    BranchInst *br1 = dyn_cast<BranchInst>(BB1->getTerminator());
+    BasicBlock *BB2 = i2->getParent();
 
-    int isba = 0;
-    //    int baID = instTobaMap[i1];
+    // This gets the innermost loop for basicBlock BB. Returns null when no loop.
+    Loop *loop1 = LI.getLoopFor(BB1);
+    Loop *loop2 = LI.getLoopFor(BB2);
 
     /*
       For conditional blocks:
       getLoopDepth is used to check if both the instructions, i1 and i2 are
-      outside the loop. Follow the algorithm when both are outside the loop.
+      outside the loop or within the same loop.
      */
+    unsigned loopDepth_i1 = LI.getLoopDepth(BB1);
+    unsigned loopDepth_i2 = LI.getLoopDepth(BB2);
 
+    int writeGamma = 0;
+    int writeBeta = 0;
+    int writeAlpha = 0;
+    int writeBetaAlpha = 0;
+    Instruction *predicate = NULL;
 
+    NodePred_t alphaStruct;
+    NodePred_t betaStruct;
+
+    alphaStruct.sno = 0;
+    betaStruct.sno = 0;
     
-    
+    /*
+    if(loop1 == loop2){
+      // This implies that both the instructions are in the same loop or both
+      // are outside the loop.
 
-    
-    O << " -> Node" << DestNodeID << ";\n";
+      if (isa<PHINode>(i2))
+        {
+          // This PHINode will be converted to Gamma node anyways.
+          int phi_gamma_id_local;
+          if(phi_gamma.find(i2) != phi_gamma.end())
+            phi_gamma_id_local = phi_gamma[i2];
+          else{
+            phi_gamma[i2] = phi_gamma_id++;
+            phi_gamma_id_local = phi_gamma[i2];
+            writeGamma = phi_gamma_id_local;
 
-    writeBetaAlphaNode(isba);
+            // also feed the predicate.
+            // TODO : complete this predicate function used below.
+            predicate = findPredicate_revIterate(i2);
+          }
+
+          // assumption: 0 is gamma true and 1 is gamma false.
+          Value *phi0 = i2->getOperand(0);
+          Value *phi1 = i2->getOperand(1);
+
+          if(phi0 == i1){
+            // attaching to true of gamma node
+            O << " -> Node0g" << phi_gamma_id_local << ":nw;\n";
+            O << "\tNode0g" << phi_gamma_id_local << ":s";
+          }else{
+            //when i1 is phi node's second argument;
+            // attaching to true of gamma node.
+            O << " -> Node0g" << phi_gamma_id_local << ":ne;\n";
+            O << "\tNode0g" << phi_gamma_id_local << ":s";
+          }
+        }
+      else // else for: isa<PHINode>(i2); i.e i2 is not a PHINode.
+        {
+          // start iterating from i1 to i2.
+          Instruction *tmp_i1 = i1;
+
+          while (!isa<BranchInst>(tmp_i1)) {
+            BasicBlock::iterator it1(tmp_i1);
+            it1++;
+            tmp_i1 = it1;
+          }
+
+          BasicBlock *BB_tmp = tmp_i1->getParent();
+          unsigned loopDepth_tmp = LI.getLoopDepth(BB_tmp);
+          TerminatorInst *terminator_tmp = BB_tmp->getTerminator();
+          if (loopDepth_tmp > loopDepth_i1) // means that block is part of the loop.
+            {
+              // assuming that we would have only two successors (true, false) at
+              // a time.
+              BasicBlock *bb = terminator_tmp->getSuccessor(1);
+              tmp_i1 = bb->getFirstNonPHI();
+            }
+          else //it must be the branch instruction for some condition
+            {
+              BasicBlock *bb0 = terminator_tmp->getSuccessor(0);
+              BasicBlock *bb1 = terminator_tmp->getSuccessor(1);
+
+              BranchInst *br_tmp = dyn_cast<BranchInst>(tmp_i1);
+              Value *val_tmp = br_tmp->getCondition();
+              Instruction *predicate = dyn_cast<Instruction>(val_tmp);
+
+              const BasicBlockEdge bbtedge(BB_tmp, bb0);
+              const BasicBlockEdge bbfedge(BB_tmp, bb1);
+
+              if (DT.dominates(bbtedge, i2->getParent())){
+
+              }else if (DT.dominates(bbfedge, i2->getParent())){
+
+              }else{
+
+              }
+
+            } //end else
+
+        } //else isa<PHINode> (i2)
+    }// fi loop1 == loop2
+
+    else // else for: loop1 == loop2
+    */
+    if (1)// this is when either i1,i2 is inside loop.
+      {
+        /*
+          This means that one among i1 and i2 are inside the loop body, and
+          hence a special case according to algorithm.
+         */
+        if (loopDepth_i2 > loopDepth_i1){
+          if (isa<PHINode>(i2)){
+            beta[i2] = beta_id;
+            writeBeta = beta_id;
+            beta_id++;
+
+            betaStruct.sno = writeBeta;
+
+            O << "\tNode" << SrcNodeID;
+
+            O << " -> Node0b" << writeBeta << ":nw;\n";
+          }else{
+            beta[i2] = beta_id;
+            writeBeta = beta_id;
+            beta_id++;
+
+            betaStruct.sno = writeBeta;
+            
+            O << "\tNode" << SrcNodeID;
+            
+            O << " -> Node0b" << writeBeta << ":nw;\n";
+            O << "\tNode0b" << writeBeta << ":s -> Node0b" << writeBeta << ":ne;\n";
+            O << "\tNode0b" << writeBeta << ":s";
+
+            O << " -> Node" << DestNodeID << ";\n";
+          }
+          //store the predicate; it will be feeded at the end
+          betaStruct.predicate = findPredicate_sameBlock(i2);
+        }
+        else if (LI.isLoopHeader(BB1) and LI.isLoopHeader(BB2)){
+          if (isa<PHINode>(i1)){
+            if (alpha.find(i1) == alpha.end()){
+              alpha[i1] = alpha_id;
+              writeAlpha = alpha_id;
+              alpha_id++;
+              alphaStruct.sno = writeAlpha;
+              alphaStruct.predicate = findPredicate_sameBlock(i1);
+            }
+
+            O << "\tNode0a" << alpha[i1] << ":s -> Node" << DestNodeID << ";\n";
+            
+          } else {
+            O << "\tNode" << SrcNodeID;
+            O << " -> Node" << DestNodeID << ";\n";
+          }
+        }
+        else if (LI.isLoopHeader(BB1) and isa<PHINode>(i1)){
+          if (loop2 != NULL){
+            alpha[i1] = alpha_id;
+            writeAlpha = alpha_id;
+            alpha_id++;
+
+            alphaStruct.sno = writeAlpha;
+
+            if (beta.find(i1) == beta.end()) {
+              beta[i1] = beta_id;
+              writeBeta = beta_id;
+              beta_id++;
+              betaStruct.sno = writeBeta;
+              betaStruct.predicate = findPredicate_sameBlock(i1);
+            }
+            
+            O << "\tNode0b" << beta[i1] << ":s -> " <<  "Node0a" << writeAlpha << ":n;\n";
+            O << "\tNode0a" << writeAlpha << ":sw -> " << "Node" << DestNodeID << ";\n";
+
+            alphaStruct.predicate = findPredicate_sameBlock(i1);
+          }else{
+            alpha[i1] = alpha_id;
+            writeAlpha = alpha_id;
+            alpha_id++;
+
+            alphaStruct.sno = writeAlpha;
+
+            if (beta.find(i1) == beta.end()) {
+              beta[i1] = beta_id;
+              writeBeta = beta_id;
+              beta_id++;
+              betaStruct.sno = writeBeta;
+              betaStruct.predicate = findPredicate_sameBlock(i1);
+            }
+            
+            O << "\tNode0b" << beta[i1] << ":s -> " << "Node0a"<< writeAlpha <<":n;\n";
+            O << "\tNode0a" << writeAlpha << ":se -> " << "Node" << DestNodeID << ";\n";
+
+            alphaStruct.predicate = findPredicate_sameBlock(i1);
+          }
+        }
+        else if (LI.isLoopHeader(BB1)){
+          if (loop2 != NULL){
+            alpha[i1] = alpha_id;
+            writeAlpha = alpha_id;
+            alpha_id++;
+
+            alphaStruct.sno = writeAlpha;
+
+            O << "\tNode" << SrcNodeID;
+
+            O << " -> Node0a" << writeAlpha << ":n;\n";
+            O << "\tNode0a" << writeAlpha << ":sw -> " << "Node" << DestNodeID << ";\n";
+
+            alphaStruct.predicate = findPredicate_sameBlock(i1);
+          }else {
+            int tmp_alpha = alpha[i1];
+            O << "\tNode0a" << tmp_alpha << ":se -> " << DestNodeID << ";\n";
+          }
+          
+        }
+        else if (loop1 != NULL and isa<PHINode>(i2)){
+          O << "\tNode" << SrcNodeID << " -> Node0b" << beta[i2] << ":ne;\n";
+        }
+
+      }
+
+    //    O << " -> Node" << DestNodeID << ";\n";
+
+    writeGammaNode(writeGamma, predicate);
+    writeBetaNode(betaStruct);
+    writeAlphaNode(alphaStruct);
+    //writeBetaAlphaNode(isba);
   }
 
   /// getOStream - Get the raw output stream into the graph file. Useful to

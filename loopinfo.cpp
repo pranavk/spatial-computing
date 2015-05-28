@@ -71,10 +71,14 @@ namespace {
       outs() << "Only below basic blocks are Loop Headers : \n";
       for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
         BasicBlock *bb = &*BBi;
-        if(LI.isLoopHeader(bb)){
-          outs() <<  "\t"<<bb->getName() << "\n";
-        }
+        Loop *L = LI.getLoopFor(bb);
+        outs() <<  "\t"<<bb->getName();
+        if (LI.isLoopHeader(bb))
+          outs() << "loopheader it is";
+        outs() << "\n";
       }
+
+      
 
       outs() << "LoopDepth : Block number\tLoopDepth \n";
       for (Function::iterator BBi = F.begin(), BBe = F.end(); BBi!=BBe; BBi++){
@@ -83,6 +87,37 @@ namespace {
         outs() <<  "\t\t"<<bb->getName() <<"\t\t\t" << depth<<"\n";
       }
 
+      for (inst_iterator I = inst_begin(F), E = inst_end(F); I!=E; ++I){
+        Instruction *instr = &*I;
+        outs() << "\n";
+
+        for (User::op_iterator it = instr->op_begin(), e = instr->op_end(); it!=e; it++){
+          Instruction *vi = dyn_cast<Instruction>(*it);
+          if(vi ==NULL) continue;
+          if(isa<PHINode>(vi)){
+            Value *v1 = vi->getOperand(0);
+            Value *v2 = vi->getOperand(1);
+            Instruction *ins1 = dyn_cast<Instruction>(v1);
+            Instruction *ins2 = dyn_cast<Instruction>(v2);
+            outs() << *instr << " - " << *vi << "\n";
+            
+            if (v1 == instr)
+              outs() <<"i1 is PHI's first operand\n";
+
+            if (v2 == instr)
+              outs() <<"i2 is PHI's second operand\n";
+            
+            /*            std::string ppstr;
+            raw_string_ostream rso1(ppstr);
+            ins->print(rso1);
+            */
+            //         outs() << ppstr << "\t" << v1 << "\n";
+            //outs() << *v1 << '\n' << *v2 << '\n';
+          }
+          //outs() << "\t\t" << *vi << "\n";
+          
+        }
+      }
 
 
       /*
