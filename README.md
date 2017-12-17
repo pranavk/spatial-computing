@@ -1,22 +1,12 @@
 spatial-computing
 =================
 
-The repository is manifestation of dataflow computer architecture or computation
-in space.
+This repository contains the LLVM compiler passes that are used to convert a program written in C/C++ to a synthesizable dataflow intermediate representation, called Program Dependence Mesh (PDM). PDM is our own intermediate representation based on Program Dependence Web (PDW), Program Dependence Graph (PDG), etc. It is a synthesizable representation unlike others. 
 
-We are using LLVM compiler infrastructure to manifest something similar to
-Wavescalar computer architecture. Taking ideas from Wavescalar computer
-architecture, we would be using the concept of waves and create a framework that
-would output the systemC implementation automatically from any given procedure
-in imperative languages.
+The target of the PDM is a unified platform that can be used as an ASIC, a CPU, or a CGRA.
 
-Using LLVM format is quite helpful here since it provides front end for many
-languages and convert all of them into a Common Intermediate representation
-(IR). This way we don't have to deal separately with so many different
-languages. Instead we just play with IR and proceed.
+We use the concept of waves, taken from WaveScalar Architecture, to solve synchronization problems, especially in nested loops and recursion. This compiler pass outputs the PDM in .dot format which can be easily converted to an image and parsed by SystemC for architectural exploration and analysis of the project.
 
-Hence automatic hardware synthesis for procedures given in imperative languages
-can be used immensely to enhance the performance of ASICs using this dataflow
-computer architecture.
+Using LLVM format is quite helpful here since it provides front end for many languages and convert all of them into a Common Intermediate representation (IR). Having said that, the pass should be able to get PDM from any language which has a LLVM frontend; though, this is not something I have tried.
 
 You can read [this](http://pranavk.github.io/architecture/spatial-computing/) blog post giving an overview of the project.
