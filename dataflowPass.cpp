@@ -18,14 +18,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Pass.h"
-#include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/InstIterator.h"
-#include "llvm/Support/DataFlow.h"
-#include "llvm/Analysis/Dominators.h"
+#include "llvm/Support/FileSystem.h"
 //#include "llvm/Support/GraphWriter.h"
 
 #include "DFGWriter.h"
@@ -73,14 +71,14 @@ struct DataFlowGraph : public FunctionPass,
 
   virtual void getAnalysisUsage (AnalysisUsage &AU) const {
     AU.setPreservesAll();
-    AU.addRequired<DominatorTree>();
+    AU.addRequired<DominatorTreeWrapperPass>();
   }
 
   bool runOnFunction(Function &F) {
     if (F.getName() == "main")
       return false;
 
-    DominatorTree& DT = getAnalysis<DominatorTree>();
+    DominatorTreeWrapperPass& DT = getAnalysis<DominatorTreeWrapperPass>();
 
     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res = this;
     WaveScalar obj;
@@ -101,18 +99,18 @@ struct DataFlowGraph : public FunctionPass,
       printUses(instr);
     }
 
-    std::string ErrorInfo;
-    raw_fd_ostream File("dfg.dot", ErrorInfo);
-    WriteDFG (File, (DFG<Function*>)&F, obj, DT);
+    std::error_code ErrorInfo;
+    raw_fd_ostream File("dfg.dot", ErrorInfo, sys::fs::OpenFlags::F_None);
+    WriteDFG (File, (DFG<Function*>)&F, obj, DT.getDomTree());
 
-    raw_fd_ostream File1("cfg.dot", ErrorInfo);
+    raw_fd_ostream File1("cfg.dot", ErrorInfo, sys::fs::OpenFlags::F_None);
     WriteGraph (File1, (const Function*)&F);
 
     return false;
   }
 };
 
-char DataFlowGraph::ID = 0;
+char DataFlowGraph::ID = 10;
 static RegisterPass<DataFlowGraph> X("dot-dfg",
                                      "Output Dataflow Graph in DOT format for WaveScalar Architecture",
                                      false, false);

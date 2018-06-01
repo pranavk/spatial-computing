@@ -13,6 +13,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -20,11 +21,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Pass.h"
-#include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/InstIterator.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/ADT/ilist_iterator.h"
 
 #include "waves.hpp"
 
@@ -67,7 +67,7 @@ void WaveScalar::annotateWaves(const Function &F,
     init(F);
     setBackEdges(F, res);
     for (Function::const_iterator I = F.begin(), IE = F.end(); I != IE; I++){
-      ColorMap[I] = WaveScalar::WHITE;
+	ColorMap[&*I] = WaveScalar::WHITE;
     }
 
     Q.push_back(&F.getEntryBlock());
@@ -102,12 +102,12 @@ void WaveScalar::init (const Function &F){
     //Intialize the color map.
     unsigned K = 0;
     for (Function::const_iterator I = F.begin(), IE = F.end(); I != IE; I++, K++){
-      ColorMap[I] = WaveScalar::WHITE;
-      IDMap[I] = K;
+	ColorMap[&*I] = WaveScalar::WHITE;
+      IDMap[&*I] = K;
       const BasicBlock *pbb = &*I;
       BasicBlock *pp = const_cast<BasicBlock*>(pbb);
       setLabel(&pp, K);
-      BEMap[I] = 1;
+      BEMap[&*I] = 1;
     }
   }
 

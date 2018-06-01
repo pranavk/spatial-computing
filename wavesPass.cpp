@@ -20,10 +20,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Pass.h"
-#include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/InstIterator.h"
 #include "llvm/Support/GraphWriter.h"
 
 #include "waves.hpp"
@@ -46,7 +44,7 @@ struct Waves : public FunctionPass,
     SmallVectorImpl<std::pair<const BasicBlock*, const BasicBlock*> > *res = this;
     WaveScalar obj;
     obj.annotateWaves(F, res);
-    
+
     return false;
   }
 };

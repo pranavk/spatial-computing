@@ -16,6 +16,7 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Dominators.h"
 #include <cassert>
 #include <vector>
 #include <map>
@@ -173,7 +174,7 @@ public:
       O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
 
       // If we should include the address of the node in the label, do so now.
-      if (DTraits.hasNodeAddressLabel(Node, G))
+      if (!DTraits.getNodeIdentifierLabel(Node, G).empty())
         O << "|" << static_cast<const void*>(Node);
 
       std::string NodeDesc = DTraits.getNodeDescription(Node, G);
@@ -197,7 +198,7 @@ public:
       O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
 
       // If we should include the address of the node in the label, do so now.
-      if (DTraits.hasNodeAddressLabel(Node, G))
+      if (!DTraits.getNodeIdentifierLabel(Node, G).empty())
         O << "|" << static_cast<const void*>(Node);
 
       std::string NodeDesc = DTraits.getNodeDescription(Node, G);
